@@ -1,8 +1,8 @@
-package lua
+package glua
 
 import (
 	"fmt"
-	"github.com/yuin/gopher-lua/parse"
+	"github.com/jslyzt/glua/parse"
 	"os"
 	"runtime"
 	"sync/atomic"

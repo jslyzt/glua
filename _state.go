@@ -1,4 +1,4 @@
-package lua
+package glua
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/yuin/gopher-lua/parse"
+	"github.com/jslyzt/glua/parse"
 )
 
 const MultRet = -1

@@ -1,4 +1,4 @@
-package lua
+package glua
 
 func OpenCoroutine(L *LState) int {
 	// TODO: Tie module name to contents of linit.go?

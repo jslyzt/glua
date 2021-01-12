@@ -1,5 +1,5 @@
 // GopherLua: VM and compiler for Lua in Go
-package lua
+package glua
 
 const PackageName = "GopherLua"
 const PackageVersion = "0.1"

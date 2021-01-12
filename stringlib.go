@@ -1,10 +1,10 @@
-package lua
+package glua
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/yuin/gopher-lua/pm"
+	"github.com/jslyzt/glua/pm"
 )
 
 const emptyLString LString = LString("")

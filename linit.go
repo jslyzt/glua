@@ -1,4 +1,4 @@
-package lua
+package glua
 
 const (
 	// BaseLibName is here for consistency; the base functions have no namespace/library.

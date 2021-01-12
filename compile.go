@@ -1,8 +1,8 @@
-package lua
+package glua
 
 import (
 	"fmt"
-	"github.com/yuin/gopher-lua/ast"
+	"github.com/jslyzt/glua/ast"
 	"math"
 	"reflect"
 )

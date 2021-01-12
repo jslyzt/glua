@@ -1,4 +1,4 @@
-package lua
+package glua
 
 const defaultArrayCap = 32
 const defaultHashCap = 32
