@@ -9,8 +9,7 @@ import (
 	"strings"
 )
 
-/* basic functions {{{ */
-
+// OpenBase 打开base
 func OpenBase(L *LState) int {
 	global := L.Get(GlobalsIndex).(*LTable)
 	L.SetGlobal("_G", global)
@@ -40,7 +39,7 @@ var baseFuncs = map[string]LGFunction{
 	"rawget":         baseRawGet,
 	"rawset":         baseRawSet,
 	"select":         baseSelect,
-	"_printregs":     base_PrintRegs,
+	"_printregs":     basePrintRegs,
 	"setfenv":        baseSetFEnv,
 	"setmetatable":   baseSetMetatable,
 	"tonumber":       baseToNumber,
@@ -139,13 +138,12 @@ func ipairsaux(L *LState) int {
 	v := tb.RawGetInt(i)
 	if v == LNil {
 		return 0
-	} else {
-		L.Pop(1)
-		L.Push(LNumber(i))
-		L.Push(LNumber(i))
-		L.Push(v)
-		return 2
 	}
+	L.Pop(1)
+	L.Push(LNumber(i))
+	L.Push(LNumber(i))
+	L.Push(v)
+	return 2
 }
 
 func baseIpairs(L *LState) int {
@@ -157,14 +155,14 @@ func baseIpairs(L *LState) int {
 }
 
 func loadaux(L *LState, reader io.Reader, chunkname string) int {
-	if fn, err := L.Load(reader, chunkname); err != nil {
+	fn, err := L.Load(reader, chunkname)
+	if err != nil {
 		L.Push(LNil)
 		L.Push(LString(err.Error()))
 		return 2
-	} else {
-		L.Push(fn)
-		return 1
 	}
+	L.Push(fn)
+	return 1
 }
 
 func baseLoad(L *LState) int {
@@ -240,13 +238,12 @@ func pairsaux(L *LState) int {
 	key, value := tb.Next(L.Get(2))
 	if key == LNil {
 		return 0
-	} else {
-		L.Pop(1)
-		L.Push(key)
-		L.Push(key)
-		L.Push(value)
-		return 2
 	}
+	L.Pop(1)
+	L.Push(key)
+	L.Push(key)
+	L.Push(value)
+	return 2
 }
 
 func basePairs(L *LState) int {
@@ -268,16 +265,15 @@ func basePCall(L *LState) int {
 	nargs := L.GetTop() - 1
 	if err := L.PCall(nargs, MultRet, nil); err != nil {
 		L.Push(LFalse)
-		if aerr, ok := err.(*ApiError); ok {
+		if aerr, ok := err.(*APIError); ok {
 			L.Push(aerr.Object)
 		} else {
 			L.Push(LString(err.Error()))
 		}
 		return 2
-	} else {
-		L.Insert(LTrue, 1)
-		return L.GetTop()
 	}
+	L.Insert(LTrue, 1)
+	return L.GetTop()
 }
 
 func basePrint(L *LState) int {
@@ -292,7 +288,7 @@ func basePrint(L *LState) int {
 	return 0
 }
 
-func base_PrintRegs(L *LState) int {
+func basePrintRegs(L *LState) int {
 	L.printReg()
 	return 0
 }
@@ -460,21 +456,16 @@ func baseXPCall(L *LState) int {
 	L.Push(fn)
 	if err := L.PCall(0, MultRet, errfunc); err != nil {
 		L.Push(LFalse)
-		if aerr, ok := err.(*ApiError); ok {
+		if aerr, ok := err.(*APIError); ok {
 			L.Push(aerr.Object)
 		} else {
 			L.Push(LString(err.Error()))
 		}
 		return 2
-	} else {
-		L.Insert(LTrue, top+1)
-		return L.GetTop() - top
 	}
+	L.Insert(LTrue, top+1)
+	return L.GetTop() - top
 }
-
-/* }}} */
-
-/* load lib {{{ */
 
 func loModule(L *LState) int {
 	name := L.CheckString(1)
@@ -571,10 +562,6 @@ loopbreak:
 	return 1
 }
 
-/* }}} */
-
-/* hidden features {{{ */
-
 func baseNewProxy(L *LState) int {
 	ud := L.NewUserData()
 	L.SetTop(1)
@@ -586,7 +573,3 @@ func baseNewProxy(L *LState) int {
 	L.Push(ud)
 	return 1
 }
-
-/* }}} */
-
-//

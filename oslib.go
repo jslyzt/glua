@@ -44,6 +44,7 @@ func getBoolField(L *LState, tb *LTable, key string, v bool) bool {
 	return v
 }
 
+// OpenOs 打开os
 func OpenOs(L *LState) int {
 	osmod := L.RegisterModule(OsLibName, osFuncs)
 	L.Push(osmod)
@@ -149,10 +150,9 @@ func osRemove(L *LState) int {
 		L.Push(LNil)
 		L.Push(LString(err.Error()))
 		return 2
-	} else {
-		L.Push(LTrue)
-		return 1
 	}
+	L.Push(LTrue)
+	return 1
 }
 
 func osRename(L *LState) int {
@@ -161,10 +161,9 @@ func osRename(L *LState) int {
 		L.Push(LNil)
 		L.Push(LString(err.Error()))
 		return 2
-	} else {
-		L.Push(LTrue)
-		return 1
 	}
+	L.Push(LTrue)
+	return 1
 }
 
 func osSetLocale(L *LState) int {
@@ -179,10 +178,9 @@ func osSetEnv(L *LState) int {
 		L.Push(LNil)
 		L.Push(LString(err.Error()))
 		return 2
-	} else {
-		L.Push(LTrue)
-		return 1
 	}
+	L.Push(LTrue)
+	return 1
 }
 
 func osTime(L *LState) int {

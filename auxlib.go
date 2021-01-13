@@ -8,8 +8,7 @@ import (
 	"strings"
 )
 
-/* checkType {{{ */
-
+// CheckAny 检查 any 类型
 func (ls *LState) CheckAny(n int) LValue {
 	if n > ls.GetTop() {
 		ls.ArgError(n, "value expected")
@@ -17,6 +16,7 @@ func (ls *LState) CheckAny(n int) LValue {
 	return ls.Get(n)
 }
 
+// CheckInt 检查 int 类型
 func (ls *LState) CheckInt(n int) int {
 	v := ls.Get(n)
 	if intv, ok := v.(LNumber); ok {
@@ -26,6 +26,7 @@ func (ls *LState) CheckInt(n int) int {
 	return 0
 }
 
+// CheckInt64 检查 int64 类型
 func (ls *LState) CheckInt64(n int) int64 {
 	v := ls.Get(n)
 	if intv, ok := v.(LNumber); ok {
@@ -35,6 +36,7 @@ func (ls *LState) CheckInt64(n int) int64 {
 	return 0
 }
 
+// CheckNumber 检查 number 类型
 func (ls *LState) CheckNumber(n int) LNumber {
 	v := ls.Get(n)
 	if lv, ok := v.(LNumber); ok {
@@ -44,6 +46,7 @@ func (ls *LState) CheckNumber(n int) LNumber {
 	return 0
 }
 
+// CheckString 检查 string类型
 func (ls *LState) CheckString(n int) string {
 	v := ls.Get(n)
 	if lv, ok := v.(LString); ok {
@@ -55,6 +58,7 @@ func (ls *LState) CheckString(n int) string {
 	return ""
 }
 
+// CheckBool 检查 bool类型
 func (ls *LState) CheckBool(n int) bool {
 	v := ls.Get(n)
 	if lv, ok := v.(LBool); ok {
@@ -64,6 +68,7 @@ func (ls *LState) CheckBool(n int) bool {
 	return false
 }
 
+// CheckTable 检查 table 类型
 func (ls *LState) CheckTable(n int) *LTable {
 	v := ls.Get(n)
 	if lv, ok := v.(*LTable); ok {
@@ -73,6 +78,7 @@ func (ls *LState) CheckTable(n int) *LTable {
 	return nil
 }
 
+// CheckFunction 检查 func 类型
 func (ls *LState) CheckFunction(n int) *LFunction {
 	v := ls.Get(n)
 	if lv, ok := v.(*LFunction); ok {
@@ -82,6 +88,7 @@ func (ls *LState) CheckFunction(n int) *LFunction {
 	return nil
 }
 
+// CheckUserData 检查 用户数据
 func (ls *LState) CheckUserData(n int) *LUserData {
 	v := ls.Get(n)
 	if lv, ok := v.(*LUserData); ok {
@@ -91,6 +98,7 @@ func (ls *LState) CheckUserData(n int) *LUserData {
 	return nil
 }
 
+// CheckThread 检查线程
 func (ls *LState) CheckThread(n int) *LState {
 	v := ls.Get(n)
 	if lv, ok := v.(*LState); ok {
@@ -100,6 +108,7 @@ func (ls *LState) CheckThread(n int) *LState {
 	return nil
 }
 
+// CheckType 检查类型
 func (ls *LState) CheckType(n int, typ LValueType) {
 	v := ls.Get(n)
 	if v.Type() != typ {
@@ -107,6 +116,7 @@ func (ls *LState) CheckType(n int, typ LValueType) {
 	}
 }
 
+// CheckTypes 检查类型s
 func (ls *LState) CheckTypes(n int, typs ...LValueType) {
 	vt := ls.Get(n).Type()
 	for _, typ := range typs {
@@ -121,6 +131,7 @@ func (ls *LState) CheckTypes(n int, typs ...LValueType) {
 	ls.ArgError(n, strings.Join(buf, " or ")+" expected, got "+ls.Get(n).Type().String())
 }
 
+// CheckOption 检查选项
 func (ls *LState) CheckOption(n int, options []string) int {
 	str := ls.CheckString(n)
 	for i, v := range options {
@@ -132,10 +143,7 @@ func (ls *LState) CheckOption(n int, options []string) int {
 	return 0
 }
 
-/* }}} */
-
-/* optType {{{ */
-
+// OptInt int 操作
 func (ls *LState) OptInt(n int, d int) int {
 	v := ls.Get(n)
 	if v == LNil {
@@ -148,6 +156,7 @@ func (ls *LState) OptInt(n int, d int) int {
 	return 0
 }
 
+// OptInt64 int64 操作
 func (ls *LState) OptInt64(n int, d int64) int64 {
 	v := ls.Get(n)
 	if v == LNil {
@@ -160,6 +169,7 @@ func (ls *LState) OptInt64(n int, d int64) int64 {
 	return 0
 }
 
+// OptNumber number 操作
 func (ls *LState) OptNumber(n int, d LNumber) LNumber {
 	v := ls.Get(n)
 	if v == LNil {
@@ -172,6 +182,7 @@ func (ls *LState) OptNumber(n int, d LNumber) LNumber {
 	return 0
 }
 
+// OptString string 操作
 func (ls *LState) OptString(n int, d string) string {
 	v := ls.Get(n)
 	if v == LNil {
@@ -184,6 +195,7 @@ func (ls *LState) OptString(n int, d string) string {
 	return ""
 }
 
+// OptBool bool 操作
 func (ls *LState) OptBool(n int, d bool) bool {
 	v := ls.Get(n)
 	if v == LNil {
@@ -196,6 +208,7 @@ func (ls *LState) OptBool(n int, d bool) bool {
 	return false
 }
 
+// OptTable table 操作
 func (ls *LState) OptTable(n int, d *LTable) *LTable {
 	v := ls.Get(n)
 	if v == LNil {
@@ -208,6 +221,7 @@ func (ls *LState) OptTable(n int, d *LTable) *LTable {
 	return nil
 }
 
+// OptFunction function 操作
 func (ls *LState) OptFunction(n int, d *LFunction) *LFunction {
 	v := ls.Get(n)
 	if v == LNil {
@@ -220,6 +234,7 @@ func (ls *LState) OptFunction(n int, d *LFunction) *LFunction {
 	return nil
 }
 
+// OptUserData 用户数据操作
 func (ls *LState) OptUserData(n int, d *LUserData) *LUserData {
 	v := ls.Get(n)
 	if v == LNil {
@@ -232,30 +247,22 @@ func (ls *LState) OptUserData(n int, d *LUserData) *LUserData {
 	return nil
 }
 
-/* }}} */
-
-/* error operations {{{ */
-
+// ArgError 参数错误
 func (ls *LState) ArgError(n int, message string) {
 	ls.RaiseError("bad argument #%v to %v (%v)", n, ls.rawFrameFuncName(ls.currentFrame), message)
 }
 
+// TypeError 类型错误
 func (ls *LState) TypeError(n int, typ LValueType) {
 	ls.RaiseError("bad argument #%v to %v (%v expected, got %v)", n, ls.rawFrameFuncName(ls.currentFrame), typ.String(), ls.Get(n).Type().String())
 }
 
-/* }}} */
-
-/* debug operations {{{ */
-
+// Where where
 func (ls *LState) Where(level int) string {
 	return ls.where(level, false)
 }
 
-/* }}} */
-
-/* table operations {{{ */
-
+// FindTable 查询
 func (ls *LState) FindTable(obj *LTable, n string, size int) LValue {
 	names := strings.Split(n, ".")
 	curobj := obj
@@ -277,10 +284,7 @@ func (ls *LState) FindTable(obj *LTable, n string, size int) LValue {
 	return curobj
 }
 
-/* }}} */
-
-/* register operations {{{ */
-
+// RegisterModule 模块注册
 func (ls *LState) RegisterModule(name string, funcs map[string]LGFunction) LValue {
 	tb := ls.FindTable(ls.Get(RegistryIndex).(*LTable), "_LOADED", 1)
 	mod := ls.GetField(tb, name)
@@ -299,6 +303,7 @@ func (ls *LState) RegisterModule(name string, funcs map[string]LGFunction) LValu
 	return mod
 }
 
+// SetFuncs 设置方法s
 func (ls *LState) SetFuncs(tb *LTable, funcs map[string]LGFunction, upvalues ...LValue) *LTable {
 	for fname, fn := range funcs {
 		tb.RawSetString(fname, ls.NewClosure(fn, upvalues...))
@@ -306,10 +311,7 @@ func (ls *LState) SetFuncs(tb *LTable, funcs map[string]LGFunction, upvalues ...
 	return tb
 }
 
-/* }}} */
-
-/* metatable operations {{{ */
-
+// NewTypeMetatable 创建元组
 func (ls *LState) NewTypeMetatable(typ string) *LTable {
 	regtable := ls.Get(RegistryIndex)
 	mt := ls.GetField(regtable, typ)
@@ -321,14 +323,17 @@ func (ls *LState) NewTypeMetatable(typ string) *LTable {
 	return mtnew
 }
 
+// GetMetaField 获取属性
 func (ls *LState) GetMetaField(obj LValue, event string) LValue {
 	return ls.metaOp1(obj, event)
 }
 
+// GetTypeMetatable 获取类型
 func (ls *LState) GetTypeMetatable(typ string) LValue {
 	return ls.GetField(ls.Get(RegistryIndex), typ)
 }
 
+// CallMeta 调用
 func (ls *LState) CallMeta(obj LValue, event string) LValue {
 	op := ls.metaOp1(obj, event)
 	if op.Type() == LTFunction {
@@ -340,10 +345,7 @@ func (ls *LState) CallMeta(obj LValue, event string) LValue {
 	return LNil
 }
 
-/* }}} */
-
-/* load and function call operations {{{ */
-
+// LoadFile 加载文件
 func (ls *LState) LoadFile(path string) (*LFunction, error) {
 	var file *os.File
 	var err error
@@ -353,7 +355,7 @@ func (ls *LState) LoadFile(path string) (*LFunction, error) {
 		file, err = os.Open(path)
 		defer file.Close()
 		if err != nil {
-			return nil, newApiErrorE(ApiErrorFile, err)
+			return nil, newAPIErrorE(APIErrorFile, err)
 		}
 	}
 
@@ -361,14 +363,14 @@ func (ls *LState) LoadFile(path string) (*LFunction, error) {
 	// get the first character.
 	c, err := reader.ReadByte()
 	if err != nil && err != io.EOF {
-		return nil, newApiErrorE(ApiErrorFile, err)
+		return nil, newAPIErrorE(APIErrorFile, err)
 	}
 	if c == byte('#') {
 		// Unix exec. file?
 		// skip first line
-		_, err, _ = readBufioLine(reader)
+		_, _, err = readBufioLine(reader)
 		if err != nil {
-			return nil, newApiErrorE(ApiErrorFile, err)
+			return nil, newAPIErrorE(APIErrorFile, err)
 		}
 	}
 
@@ -377,38 +379,37 @@ func (ls *LState) LoadFile(path string) (*LFunction, error) {
 		// unread the first character of the file or newline character(readBufioLine's last byte).
 		err = reader.UnreadByte()
 		if err != nil {
-			return nil, newApiErrorE(ApiErrorFile, err)
+			return nil, newAPIErrorE(APIErrorFile, err)
 		}
 	}
 
 	return ls.Load(reader, path)
 }
 
+// LoadString 加载字符串
 func (ls *LState) LoadString(source string) (*LFunction, error) {
 	return ls.Load(strings.NewReader(source), "<string>")
 }
 
+// DoFile 执行文件
 func (ls *LState) DoFile(path string) error {
-	if fn, err := ls.LoadFile(path); err != nil {
+	fn, err := ls.LoadFile(path)
+	if err != nil {
 		return err
-	} else {
-		ls.Push(fn)
-		return ls.PCall(0, MultRet, nil)
 	}
+	ls.Push(fn)
+	return ls.PCall(0, MultRet, nil)
 }
 
+// DoString 执行字符串
 func (ls *LState) DoString(source string) error {
-	if fn, err := ls.LoadString(source); err != nil {
+	fn, err := ls.LoadString(source)
+	if err != nil {
 		return err
-	} else {
-		ls.Push(fn)
-		return ls.PCall(0, MultRet, nil)
 	}
+	ls.Push(fn)
+	return ls.PCall(0, MultRet, nil)
 }
-
-/* }}} */
-
-/* GopherLua original APIs {{{ */
 
 // ToStringMeta returns string representation of given LValue.
 // This method calls the `__tostring` meta method if defined.
@@ -418,12 +419,11 @@ func (ls *LState) ToStringMeta(lv LValue) LValue {
 		ls.Push(lv)
 		ls.Call(1, 1)
 		return ls.reg.Pop()
-	} else {
-		return LString(lv.String())
 	}
+	return LString(lv.String())
 }
 
-// Set a module loader to the package.preload table.
+// PreloadModule Set a module loader to the package.preload table.
 func (ls *LState) PreloadModule(name string, loader LGFunction) {
 	preload := ls.GetField(ls.GetField(ls.Get(EnvironIndex), "package"), "preload")
 	if _, ok := preload.(*LTable); !ok {
@@ -432,7 +432,7 @@ func (ls *LState) PreloadModule(name string, loader LGFunction) {
 	ls.SetField(preload, name, ls.NewFunction(loader))
 }
 
-// Checks whether the given index is an LChannel and returns this channel.
+// CheckChannel Checks whether the given index is an LChannel and returns this channel.
 func (ls *LState) CheckChannel(n int) chan LValue {
 	v := ls.Get(n)
 	if ch, ok := v.(LChannel); ok {
@@ -442,7 +442,7 @@ func (ls *LState) CheckChannel(n int) chan LValue {
 	return nil
 }
 
-// If the given index is a LChannel, returns this channel. If this argument is absent or is nil, returns ch. Otherwise, raises an error.
+// OptChannel If the given index is a LChannel, returns this channel. If this argument is absent or is nil, returns ch. Otherwise, raises an error.
 func (ls *LState) OptChannel(n int, ch chan LValue) chan LValue {
 	v := ls.Get(n)
 	if v == LNil {
@@ -454,7 +454,3 @@ func (ls *LState) OptChannel(n int, ch chan LValue) chan LValue {
 	ls.TypeError(n, LTChannel)
 	return nil
 }
-
-/* }}} */
-
-//

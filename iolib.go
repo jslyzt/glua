@@ -41,12 +41,16 @@ type lFileType int
 const (
 	lFileFile lFileType = iota
 	lFileProcess
+
+	fileDefOutIndex        = 1
+	fileDefInIndex         = 2
+	fileDefaultWriteBuffer = 4096
+	fileDefaultReadBuffer  = 4096
 )
 
-const fileDefOutIndex = 1
-const fileDefInIndex = 2
-const fileDefaultWriteBuffer = 4096
-const fileDefaultReadBuffer = 4096
+var (
+	errUnimplemented = errors.New("Unimplemented for system where exec.ExitError.Sys() is not syscall.WaitStatus")
+)
 
 func checkFile(L *LState) *lFile {
 	ud := L.CheckUserData(1)
@@ -178,6 +182,7 @@ var stdFiles = []struct {
 	{"stderr", os.Stderr, true, false},
 }
 
+// OpenIo 打开io
 func OpenIo(L *LState) int {
 	mod := L.RegisterModule(IoLibName, map[string]LGFunction{}).(*LTable)
 	mt := L.NewTypeMetatable(lFileClass)
@@ -288,7 +293,7 @@ func fileCloseAux(L *LState, file *lFile) int {
 				if s, ok := e2.Sys().(syscall.WaitStatus); ok {
 					exitStatus = s.ExitStatus()
 				} else {
-					err = errors.New("Unimplemented for system where exec.ExitError.Sys() is not syscall.WaitStatus.")
+					err = errUnimplemented
 				}
 			}
 		} else {
@@ -344,7 +349,7 @@ func fileReadAux(L *LState, file *lFile, idx int) int {
 			}
 			var buf []byte
 			var iseof bool
-			buf, err, iseof = readBufioSize(file.reader, size)
+			buf, iseof, err = readBufioSize(file.reader, size)
 			if iseof {
 				L.Push(LNil)
 				goto normalreturn
@@ -385,7 +390,7 @@ func fileReadAux(L *LState, file *lFile, idx int) int {
 				case 'l':
 					var buf []byte
 					var iseof bool
-					buf, err, iseof = readBufioLine(file.reader)
+					buf, iseof, err = readBufioLine(file.reader)
 					if iseof {
 						L.Push(LNil)
 						goto normalreturn

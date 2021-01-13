@@ -7,8 +7,11 @@ import (
 	"github.com/jslyzt/glua/pm"
 )
 
-const emptyLString LString = LString("")
+const (
+	emptyLString LString = LString("")
+)
 
+// OpenString 打开 string
 func OpenString(L *LState) int {
 	var mod *LTable
 	//_, ok := L.G.builtinMts[int(LTString)]
@@ -194,10 +197,8 @@ func capturedString(L *LState, m *pm.MatchData, str string, idx int) string {
 	}
 	if m.IsPosCapture(idx) {
 		return fmt.Sprint(m.Capture(idx))
-	} else {
-		return str[m.Capture(idx):m.Capture(idx+1)]
 	}
-
+	return str[m.Capture(idx):m.Capture(idx+1)]
 }
 
 func strGsubDoReplace(str string, info []replaceInfo) string {
@@ -303,7 +304,7 @@ func strGmatchIter(L *LState) int {
 	str := md.str
 	matches := md.matches
 	idx := md.pos
-	md.pos += 1
+	md.pos++
 	if idx == len(matches) {
 		return 0
 	}
@@ -432,7 +433,7 @@ func strUpper(L *LState) int {
 
 func luaIndex2StringIndex(str string, i int, start bool) int {
 	if start && i != 0 {
-		i -= 1
+		i--
 	}
 	l := len(str)
 	if i < 0 {

@@ -4,30 +4,36 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/jslyzt/glua/ast"
 	"io"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/jslyzt/cast"
+	"github.com/jslyzt/glua/ast"
 )
 
-const EOF = -1
-const whitespace1 = 1<<'\t' | 1<<' '
-const whitespace2 = 1<<'\t' | 1<<'\n' | 1<<'\r' | 1<<' '
+// 常量定义
+const (
+	EOF         = -1
+	whitespace1 = 1<<'\t' | 1<<' '
+	whitespace2 = 1<<'\t' | 1<<'\n' | 1<<'\r' | 1<<' '
+)
 
+// Error 错误
 type Error struct {
 	Pos     ast.Position
 	Message string
 	Token   string
 }
 
+// Error 错误
 func (e *Error) Error() string {
 	pos := e.Pos
 	if pos.Line == EOF {
 		return fmt.Sprintf("%v at EOF:   %s\n", pos.Source, e.Message)
-	} else {
-		return fmt.Sprintf("%v line:%d(column:%d) near '%v':   %s\n", pos.Source, pos.Line, pos.Column, e.Token, e.Message)
 	}
+	return fmt.Sprintf("%v line:%d(column:%d) near '%v':   %s\n", pos.Source, pos.Line, pos.Column, e.Token, e.Message)
 }
 
 func writeChar(buf *bytes.Buffer, c int) { buf.WriteByte(byte(c)) }
@@ -42,11 +48,13 @@ func isDigit(ch int) bool {
 	return '0' <= ch && ch <= '9' || 'a' <= ch && ch <= 'f' || 'A' <= ch && ch <= 'F'
 }
 
+// Scanner 扫描
 type Scanner struct {
 	Pos    ast.Position
 	reader *bufio.Reader
 }
 
+// NewScanner 扫描器
 func NewScanner(reader io.Reader, source string) *Scanner {
 	return &Scanner{
 		Pos: ast.Position{
@@ -58,9 +66,15 @@ func NewScanner(reader io.Reader, source string) *Scanner {
 	}
 }
 
-func (sc *Scanner) Error(tok string, msg string) *Error { return &Error{sc.Pos, msg, tok} }
+// Error 错误
+func (sc *Scanner) Error(tok string, msg string) *Error {
+	return &Error{sc.Pos, msg, tok}
+}
 
-func (sc *Scanner) TokenError(tok ast.Token, msg string) *Error { return &Error{tok.Pos, msg, tok.Str} }
+// TokenError token错误
+func (sc *Scanner) TokenError(tok ast.Token, msg string) *Error {
+	return &Error{tok.Pos, msg, tok.Str}
+}
 
 func (sc *Scanner) readNext() int {
 	ch, err := sc.reader.ReadByte()
@@ -70,11 +84,12 @@ func (sc *Scanner) readNext() int {
 	return int(ch)
 }
 
+// Newline new line
 func (sc *Scanner) Newline(ch int) {
 	if ch < 0 {
 		return
 	}
-	sc.Pos.Line += 1
+	sc.Pos.Line++
 	sc.Pos.Column = 0
 	next := sc.Peek()
 	if ch == '\n' && next == '\r' || ch == '\r' && next == '\n' {
@@ -82,6 +97,7 @@ func (sc *Scanner) Newline(ch int) {
 	}
 }
 
+// Next 下一步
 func (sc *Scanner) Next() int {
 	ch := sc.readNext()
 	switch ch {
@@ -97,6 +113,7 @@ func (sc *Scanner) Next() int {
 	return ch
 }
 
+// Peek 尝试读取
 func (sc *Scanner) Peek() int {
 	ch := sc.readNext()
 	if ch != EOF {
@@ -255,7 +272,7 @@ func (sc *Scanner) scanMultilineString(ch int, buf *bytes.Buffer) error {
 	var count1, count2 int
 	count1, ch = sc.countSep(ch)
 	if ch != '[' {
-		return sc.Error(string(ch), "invalid multiline string")
+		return sc.Error(cast.ToString(ch), "invalid multiline string")
 	}
 	ch = sc.Next()
 	if ch == '\n' || ch == '\r' {
@@ -286,8 +303,10 @@ var reservedWords = map[string]int{
 	"end": TEnd, "false": TFalse, "for": TFor, "function": TFunction,
 	"if": TIf, "in": TIn, "local": TLocal, "nil": TNil, "not": TNot, "or": TOr,
 	"return": TReturn, "repeat": TRepeat, "then": TThen, "true": TTrue,
-	"until": TUntil, "while": TWhile}
+	"until": TUntil, "while": TWhile,
+}
 
+// Scan 扫描
 func (sc *Scanner) Scan(lexer *Lexer) (ast.Token, error) {
 redo:
 	var err error
@@ -338,7 +357,7 @@ redo:
 				goto redo
 			} else {
 				tok.Type = ch
-				tok.Str = string(ch)
+				tok.Str = cast.ToString(ch)
 			}
 		case '"', '\'':
 			tok.Type = TString
@@ -351,7 +370,7 @@ redo:
 				tok.Str = buf.String()
 			} else {
 				tok.Type = ch
-				tok.Str = string(ch)
+				tok.Str = cast.ToString(ch)
 			}
 		case '=':
 			if sc.Peek() == '=' {
@@ -360,7 +379,7 @@ redo:
 				sc.Next()
 			} else {
 				tok.Type = ch
-				tok.Str = string(ch)
+				tok.Str = cast.ToString(ch)
 			}
 		case '~':
 			if sc.Peek() == '=' {
@@ -377,7 +396,7 @@ redo:
 				sc.Next()
 			} else {
 				tok.Type = ch
-				tok.Str = string(ch)
+				tok.Str = cast.ToString(ch)
 			}
 		case '>':
 			if sc.Peek() == '=' {
@@ -386,7 +405,7 @@ redo:
 				sc.Next()
 			} else {
 				tok.Type = ch
-				tok.Str = string(ch)
+				tok.Str = cast.ToString(ch)
 			}
 		case '.':
 			ch2 := sc.Peek()
@@ -410,7 +429,7 @@ redo:
 			tok.Str = buf.String()
 		case '+', '*', '/', '%', '^', '#', '(', ')', '{', '}', ']', ';', ':', ',':
 			tok.Type = ch
-			tok.Str = string(ch)
+			tok.Str = cast.ToString(ch)
 		default:
 			writeChar(buf, ch)
 			err = sc.Error(buf.String(), "Invalid token")
@@ -425,6 +444,7 @@ finally:
 
 // yacc interface {{{
 
+// Lexer 分析
 type Lexer struct {
 	scanner       *Scanner
 	Stmts         []ast.Stmt
@@ -433,6 +453,7 @@ type Lexer struct {
 	PrevTokenType int
 }
 
+// Lex 分析
 func (lx *Lexer) Lex(lval *yySymType) int {
 	lx.PrevTokenType = lx.Token.Type
 	tok, err := lx.scanner.Scan(lx)
@@ -447,14 +468,17 @@ func (lx *Lexer) Lex(lval *yySymType) int {
 	return int(tok.Type)
 }
 
+// Error 错误
 func (lx *Lexer) Error(message string) {
 	panic(lx.scanner.Error(lx.Token.Str, message))
 }
 
+// TokenError token 错误
 func (lx *Lexer) TokenError(tok ast.Token, message string) {
 	panic(lx.scanner.TokenError(tok, message))
 }
 
+// Parse 解析
 func Parse(reader io.Reader, name string) (chunk []ast.Stmt, err error) {
 	lexer := &Lexer{NewScanner(reader, name), nil, false, ast.Token{Str: ""}, TNil}
 	chunk = nil
@@ -467,8 +491,6 @@ func Parse(reader io.Reader, name string) (chunk []ast.Stmt, err error) {
 	chunk = lexer.Stmts
 	return
 }
-
-// }}}
 
 // Dump {{{
 
@@ -532,6 +554,7 @@ func dump(node interface{}, level int, s string) string {
 	return strings.Join(buf, "\n")
 }
 
+// Dump 存储
 func Dump(chunk []ast.Stmt) string {
 	return dump(chunk, 0, "   ")
 }

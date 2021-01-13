@@ -19,76 +19,72 @@ import (
 	"github.com/jslyzt/glua/parse"
 )
 
-const MultRet = -1
-const RegistryIndex = -10000
-const EnvironIndex = -10001
-const GlobalsIndex = -10002
+// 常量定义
+const (
+	MultRet       = -1
+	RegistryIndex = -10000
+	EnvironIndex  = -10001
+	GlobalsIndex  = -10002
+)
 
-/* ApiError {{{ */
-
-type ApiError struct {
-	Type       ApiErrorType
+// APIError api错误
+type APIError struct {
+	Type       APIErrorType
 	Object     LValue
 	StackTrace string
 	// Underlying error. This attribute is set only if the Type is ApiErrorFile or ApiErrorSyntax
 	Cause error
 }
 
-func newApiError(code ApiErrorType, object LValue) *ApiError {
-	return &ApiError{code, object, "", nil}
+func newAPIError(code APIErrorType, object LValue) *APIError {
+	return &APIError{code, object, "", nil}
 }
 
-func newApiErrorS(code ApiErrorType, message string) *ApiError {
-	return newApiError(code, LString(message))
+func newAPIErrorS(code APIErrorType, message string) *APIError {
+	return newAPIError(code, LString(message))
 }
 
-func newApiErrorE(code ApiErrorType, err error) *ApiError {
-	return &ApiError{code, LString(err.Error()), "", err}
+func newAPIErrorE(code APIErrorType, err error) *APIError {
+	return &APIError{code, LString(err.Error()), "", err}
 }
 
-func (e *ApiError) Error() string {
+// Error 错误
+func (e *APIError) Error() string {
 	if len(e.StackTrace) > 0 {
 		return fmt.Sprintf("%s\n%s", e.Object.String(), e.StackTrace)
 	}
 	return e.Object.String()
 }
 
-type ApiErrorType int
+// APIErrorType api错误类型
+type APIErrorType int
 
+// api错误枚举
 const (
-	ApiErrorSyntax ApiErrorType = iota
-	ApiErrorFile
-	ApiErrorRun
-	ApiErrorError
-	ApiErrorPanic
+	APIErrorSyntax APIErrorType = iota
+	APIErrorFile
+	APIErrorRun
+	APIErrorError
+	APIErrorPanic
 )
 
-/* }}} */
-
-/* ResumeState {{{ */
-
+// ResumeState 重启状态
 type ResumeState int
 
+// 重启状态枚举
 const (
 	ResumeOK ResumeState = iota
 	ResumeYield
 	ResumeError
 )
 
-/* }}} */
-
-/* P {{{ */
-
+// P p
 type P struct {
 	Fn      LValue
 	NRet    int
 	Protect bool
 	Handler *LFunction
 }
-
-/* }}} */
-
-/* Options {{{ */
 
 // Options is a configuration that is used to create a new LState.
 type Options struct {
@@ -111,12 +107,9 @@ type Options struct {
 	MinimizeStackMemory bool
 }
 
-/* }}} */
-
-/* Debug {{{ */
-
+// Debug 调试信息
 type Debug struct {
-	frame           *callFrame
+	frame           *CallFrame
 	Name            string
 	What            string
 	Source          string
@@ -126,14 +119,11 @@ type Debug struct {
 	LastLineDefined int
 }
 
-/* }}} */
-
-/* callFrame {{{ */
-
-type callFrame struct {
+// CallFrame 调用层
+type CallFrame struct {
 	Idx        int
 	Fn         *LFunction
-	Parent     *callFrame
+	Parent     *CallFrame
 	Pc         int
 	Base       int
 	LocalBase  int
@@ -143,14 +133,15 @@ type callFrame struct {
 	TailCall   int
 }
 
-type callFrameStack interface {
-	Push(v callFrame)
-	Pop() *callFrame
-	Last() *callFrame
+// CallFrameStack 调用堆栈
+type CallFrameStack interface {
+	Push(v CallFrame)
+	Pop() *CallFrame
+	Last() *CallFrame
 
 	SetSp(sp int)
 	Sp() int
-	At(sp int) *callFrame
+	At(sp int) *CallFrame
 
 	IsFull() bool
 	IsEmpty() bool
@@ -159,26 +150,30 @@ type callFrameStack interface {
 }
 
 type fixedCallFrameStack struct {
-	array []callFrame
+	array []CallFrame
 	sp    int
 }
 
-func newFixedCallFrameStack(size int) callFrameStack {
+func newFixedCallFrameStack(size int) CallFrameStack {
 	return &fixedCallFrameStack{
-		array: make([]callFrame, size),
+		array: make([]CallFrame, size),
 		sp:    0,
 	}
 }
 
-func (cs *fixedCallFrameStack) IsEmpty() bool { return cs.sp == 0 }
+func (cs *fixedCallFrameStack) IsEmpty() bool {
+	return cs.sp == 0
+}
 
-func (cs *fixedCallFrameStack) IsFull() bool { return cs.sp == len(cs.array) }
+func (cs *fixedCallFrameStack) IsFull() bool {
+	return cs.sp == len(cs.array)
+}
 
 func (cs *fixedCallFrameStack) Clear() {
 	cs.sp = 0
 }
 
-func (cs *fixedCallFrameStack) Push(v callFrame) {
+func (cs *fixedCallFrameStack) Push(v CallFrame) {
 	cs.array[cs.sp] = v
 	cs.array[cs.sp].Idx = cs.sp
 	cs.sp++
@@ -192,18 +187,18 @@ func (cs *fixedCallFrameStack) SetSp(sp int) {
 	cs.sp = sp
 }
 
-func (cs *fixedCallFrameStack) Last() *callFrame {
+func (cs *fixedCallFrameStack) Last() *CallFrame {
 	if cs.sp == 0 {
 		return nil
 	}
 	return &cs.array[cs.sp-1]
 }
 
-func (cs *fixedCallFrameStack) At(sp int) *callFrame {
+func (cs *fixedCallFrameStack) At(sp int) *CallFrame {
 	return &cs.array[sp]
 }
 
-func (cs *fixedCallFrameStack) Pop() *callFrame {
+func (cs *fixedCallFrameStack) Pop() *CallFrame {
 	cs.sp--
 	return &cs.array[cs.sp]
 }
@@ -218,7 +213,7 @@ func (cs *fixedCallFrameStack) FreeAll() {
 const FramesPerSegment = 8
 
 type callFrameStackSegment struct {
-	array [FramesPerSegment]callFrame
+	array [FramesPerSegment]CallFrame
 }
 type segIdx uint16
 type autoGrowingCallFrameStack struct {
@@ -247,7 +242,7 @@ func freeCallFrameStackSegment(seg *callFrameStackSegment) {
 // newCallFrameStack allocates a new stack for a lua state, which will auto grow up to a max size of at least maxSize.
 // it will actually grow up to the next segment size multiple after maxSize, where the segment size is dictated by
 // FramesPerSegment.
-func newAutoGrowingCallFrameStack(maxSize int) callFrameStack {
+func newAutoGrowingCallFrameStack(maxSize int) CallFrameStack {
 	cs := &autoGrowingCallFrameStack{
 		segments: make([]*callFrameStackSegment, (maxSize+(FramesPerSegment-1))/FramesPerSegment),
 		segIdx:   0,
@@ -283,7 +278,7 @@ func (cs *autoGrowingCallFrameStack) FreeAll() {
 
 // Push pushes the passed callFrame onto the stack. it panics if the stack is full, caller should call IsFull() before
 // invoking this to avoid this.
-func (cs *autoGrowingCallFrameStack) Push(v callFrame) {
+func (cs *autoGrowingCallFrameStack) Push(v CallFrame) {
 	curSeg := cs.segments[cs.segIdx]
 	if cs.segSp >= FramesPerSegment {
 		// segment full, push new segment if allowed
@@ -322,7 +317,7 @@ func (cs *autoGrowingCallFrameStack) SetSp(sp int) {
 	cs.segSp = desiredFramesInLastSeg
 }
 
-func (cs *autoGrowingCallFrameStack) Last() *callFrame {
+func (cs *autoGrowingCallFrameStack) Last() *CallFrame {
 	curSeg := cs.segments[cs.segIdx]
 	segSp := cs.segSp
 	if segSp == 0 {
@@ -335,14 +330,14 @@ func (cs *autoGrowingCallFrameStack) Last() *callFrame {
 	return &curSeg.array[segSp-1]
 }
 
-func (cs *autoGrowingCallFrameStack) At(sp int) *callFrame {
+func (cs *autoGrowingCallFrameStack) At(sp int) *CallFrame {
 	segIdx := segIdx(sp / FramesPerSegment)
 	frameIdx := uint8(sp % FramesPerSegment)
 	return &cs.segments[segIdx].array[frameIdx]
 }
 
 // Pop pops off the most recent stack frame and returns it
-func (cs *autoGrowingCallFrameStack) Pop() *callFrame {
+func (cs *autoGrowingCallFrameStack) Pop() *CallFrame {
 	curSeg := cs.segments[cs.segIdx]
 	if cs.segSp == 0 {
 		if cs.segIdx == 0 {
@@ -358,10 +353,6 @@ func (cs *autoGrowingCallFrameStack) Pop() *callFrame {
 	cs.segSp--
 	return &curSeg.array[cs.segSp]
 }
-
-/* }}} */
-
-/* registry {{{ */
 
 type registryHandler interface {
 	registryOverflow()
@@ -577,10 +568,6 @@ func (rg *registry) IsFull() bool {
 	return rg.top >= cap(rg.array)
 }
 
-/* }}} */
-
-/* Global {{{ */
-
 func newGlobal() *Global {
 	return &Global{
 		MainThread: nil,
@@ -591,18 +578,14 @@ func newGlobal() *Global {
 	}
 }
 
-/* }}} */
-
-/* package local methods {{{ */
-
 func panicWithTraceback(L *LState) {
-	err := newApiError(ApiErrorRun, L.Get(-1))
+	err := newAPIError(APIErrorRun, L.Get(-1))
 	err.StackTrace = L.stackTrace(0)
 	panic(err)
 }
 
 func panicWithoutTraceback(L *LState) {
-	err := newApiError(ApiErrorRun, L.Get(-1))
+	err := newAPIError(APIErrorRun, L.Get(-1))
 	panic(err)
 }
 
@@ -696,7 +679,7 @@ func (ls *LState) raiseError(level int, format string, args ...interface{}) {
 	ls.Panic(ls)
 }
 
-func (ls *LState) findLocal(frame *callFrame, no int) string {
+func (ls *LState) findLocal(frame *CallFrame, no int) string {
 	fn := frame.Fn
 	if !fn.IsG {
 		if name, ok := fn.LocalName(no, frame.Pc-1); ok {
@@ -766,7 +749,7 @@ func (ls *LState) stackTrace(level int) string {
 	return fmt.Sprintf("%s\n%s", header, strings.Join(buf, "\n"))
 }
 
-func (ls *LState) formattedFrameFuncName(fr *callFrame) string {
+func (ls *LState) formattedFrameFuncName(fr *CallFrame) string {
 	name, ischunk := ls.frameFuncName(fr)
 	if ischunk {
 		return name
@@ -777,19 +760,18 @@ func (ls *LState) formattedFrameFuncName(fr *callFrame) string {
 	return fmt.Sprintf("function %s", name)
 }
 
-func (ls *LState) rawFrameFuncName(fr *callFrame) string {
+func (ls *LState) rawFrameFuncName(fr *CallFrame) string {
 	name, _ := ls.frameFuncName(fr)
 	return name
 }
 
-func (ls *LState) frameFuncName(fr *callFrame) (string, bool) {
+func (ls *LState) frameFuncName(fr *CallFrame) (string, bool) {
 	frame := fr.Parent
 	if frame == nil {
 		if ls.Parent == nil {
 			return "main chunk", true
-		} else {
-			return "corountine", true
 		}
+		return "corountine", true
 	}
 	if !frame.Fn.IsG {
 		pc := frame.Pc - 1
@@ -975,7 +957,7 @@ func (ls *LState) metaCall(lvalue LValue) (*LFunction, bool) {
 	return nil, false
 }
 
-func (ls *LState) initCallFrame(cf *callFrame) { // +inline-start
+func (ls *LState) initCallFrame(cf *CallFrame) { // +inline-start
 	if cf.Fn.IsG {
 		ls.reg.SetTop(cf.LocalBase + cf.NArgs)
 	} else {
@@ -1067,7 +1049,7 @@ func (ls *LState) initCallFrame(cf *callFrame) { // +inline-start
 	}
 } // +inline-end
 
-func (ls *LState) pushCallFrame(cf callFrame, fn LValue, meta bool) { // +inline-start
+func (ls *LState) pushCallFrame(cf CallFrame, fn LValue, meta bool) { // +inline-start
 	if meta {
 		cf.NArgs++
 		ls.reg.Insert(fn, cf.LocalBase)
@@ -1184,7 +1166,7 @@ func (ls *LState) callR(nargs, nret, rbase int) {
 	}
 	lv := ls.reg.Get(base)
 	fn, meta := ls.metaCall(lv)
-	ls.pushCallFrame(callFrame{
+	ls.pushCallFrame(CallFrame{
 		Fn:         fn,
 		Pc:         0,
 		Base:       base,
@@ -1230,9 +1212,8 @@ func (ls *LState) getField(obj LValue, key LValue) LValue {
 			ls.reg.Push(key)
 			ls.Call(2, 1)
 			return ls.reg.Pop()
-		} else {
-			curobj = metaindex
 		}
+		curobj = metaindex
 	}
 	ls.RaiseError("too many recursions in gettable")
 	return nil
@@ -1261,9 +1242,8 @@ func (ls *LState) getFieldString(obj LValue, key string) LValue {
 			ls.reg.Push(LString(key))
 			ls.Call(2, 1)
 			return ls.reg.Pop()
-		} else {
-			curobj = metaindex
 		}
+		curobj = metaindex
 	}
 	ls.RaiseError("too many recursions in gettable")
 	return nil
@@ -1294,9 +1274,8 @@ func (ls *LState) setField(obj LValue, key LValue, value LValue) {
 			ls.reg.Push(value)
 			ls.Call(3, 0)
 			return
-		} else {
-			curobj = metaindex
 		}
+		curobj = metaindex
 	}
 	ls.RaiseError("too many recursions in settable")
 }
@@ -1326,17 +1305,13 @@ func (ls *LState) setFieldString(obj LValue, key string, value LValue) {
 			ls.reg.Push(value)
 			ls.Call(3, 0)
 			return
-		} else {
-			curobj = metaindex
 		}
+		curobj = metaindex
 	}
 	ls.RaiseError("too many recursions in settable")
 }
 
-/* }}} */
-
-/* api methods {{{ */
-
+// NewState new state
 func NewState(opts ...Options) *LState {
 	var ls *LState
 	if len(opts) == 0 {
@@ -1368,10 +1343,12 @@ func NewState(opts ...Options) *LState {
 	return ls
 }
 
+// IsClosed 是否关闭
 func (ls *LState) IsClosed() bool {
 	return ls.stack == nil
 }
 
+// Close 关闭
 func (ls *LState) Close() {
 	atomic.AddInt32(&ls.stop, 1)
 	for _, file := range ls.G.tempFiles {
@@ -1383,12 +1360,12 @@ func (ls *LState) Close() {
 	ls.stack = nil
 }
 
-/* registry operations {{{ */
-
+// GetTop 获取 top
 func (ls *LState) GetTop() int {
 	return ls.reg.Top() - ls.currentLocalBase()
 }
 
+// SetTop 设置 top
 func (ls *LState) SetTop(idx int) {
 	base := ls.currentLocalBase()
 	newtop := ls.indexToReg(idx) + 1
@@ -1399,6 +1376,7 @@ func (ls *LState) SetTop(idx int) {
 	}
 }
 
+// Replace 替换
 func (ls *LState) Replace(idx int, value LValue) {
 	base := ls.currentLocalBase()
 	if idx > 0 {
@@ -1444,6 +1422,7 @@ func (ls *LState) Replace(idx int, value LValue) {
 	}
 }
 
+// Get 获取
 func (ls *LState) Get(idx int) LValue {
 	base := ls.currentLocalBase()
 	if idx > 0 {
@@ -1480,13 +1459,15 @@ func (ls *LState) Get(idx int) LValue {
 			return LNil
 		}
 	}
-	return LNil
+	//return LNil
 }
 
+// Push 推入
 func (ls *LState) Push(value LValue) {
 	ls.reg.Push(value)
 }
 
+// Pop 推出
 func (ls *LState) Pop(n int) {
 	for i := 0; i < n; i++ {
 		if ls.GetTop() == 0 {
@@ -1496,6 +1477,7 @@ func (ls *LState) Pop(n int) {
 	}
 }
 
+// Insert 插入
 func (ls *LState) Insert(value LValue, index int) {
 	reg := ls.indexToReg(index)
 	top := ls.reg.Top()
@@ -1513,6 +1495,7 @@ func (ls *LState) Insert(value LValue, index int) {
 	ls.reg.Set(reg, value)
 }
 
+// Remove 删除
 func (ls *LState) Remove(index int) {
 	reg := ls.indexToReg(index)
 	top := ls.reg.Top()
@@ -1531,14 +1514,12 @@ func (ls *LState) Remove(index int) {
 	ls.reg.SetTop(top - 1)
 }
 
-/* }}} */
-
-/* object allocation {{{ */
-
+// NewTable new table
 func (ls *LState) NewTable() *LTable {
 	return newLTable(defaultArrayCap, defaultHashCap)
 }
 
+// CreateTable create table
 func (ls *LState) CreateTable(acap, hcap int) *LTable {
 	return newLTable(acap, hcap)
 }
@@ -1557,10 +1538,12 @@ func (ls *LState) NewThread() (*LState, context.CancelFunc) {
 	return thread, f
 }
 
+// NewFunctionFromProto new func
 func (ls *LState) NewFunctionFromProto(proto *FunctionProto) *LFunction {
 	return newLFunctionL(proto, ls.Env, int(proto.NumUpvalues))
 }
 
+// NewUserData new user data
 func (ls *LState) NewUserData() *LUserData {
 	return &LUserData{
 		Env:       ls.currentEnv(),
@@ -1568,10 +1551,12 @@ func (ls *LState) NewUserData() *LUserData {
 	}
 }
 
+// NewFunction new func
 func (ls *LState) NewFunction(fn LGFunction) *LFunction {
 	return newLFunctionG(fn, ls.currentEnv(), 0)
 }
 
+// NewClosure new closure
 func (ls *LState) NewClosure(fn LGFunction, upvalues ...LValue) *LFunction {
 	cl := newLFunctionG(fn, ls.currentEnv(), len(upvalues))
 	for i, lv := range upvalues {
@@ -1582,14 +1567,12 @@ func (ls *LState) NewClosure(fn LGFunction, upvalues ...LValue) *LFunction {
 	return cl
 }
 
-/* }}} */
-
-/* toType {{{ */
-
+// ToBool to bool
 func (ls *LState) ToBool(n int) bool {
 	return LVAsBool(ls.Get(n))
 }
 
+// ToInt to int
 func (ls *LState) ToInt(n int) int {
 	if lv, ok := ls.Get(n).(LNumber); ok {
 		return int(lv)
@@ -1602,6 +1585,7 @@ func (ls *LState) ToInt(n int) int {
 	return 0
 }
 
+// ToInt64 to int64
 func (ls *LState) ToInt64(n int) int64 {
 	if lv, ok := ls.Get(n).(LNumber); ok {
 		return int64(lv)
@@ -1614,14 +1598,17 @@ func (ls *LState) ToInt64(n int) int64 {
 	return 0
 }
 
+// ToNumber to number
 func (ls *LState) ToNumber(n int) LNumber {
 	return LVAsNumber(ls.Get(n))
 }
 
+// ToString to string
 func (ls *LState) ToString(n int) string {
 	return LVAsString(ls.Get(n))
 }
 
+// ToTable to table
 func (ls *LState) ToTable(n int) *LTable {
 	if lv, ok := ls.Get(n).(*LTable); ok {
 		return lv
@@ -1629,6 +1616,7 @@ func (ls *LState) ToTable(n int) *LTable {
 	return nil
 }
 
+// ToFunction to func
 func (ls *LState) ToFunction(n int) *LFunction {
 	if lv, ok := ls.Get(n).(*LFunction); ok {
 		return lv
@@ -1636,6 +1624,7 @@ func (ls *LState) ToFunction(n int) *LFunction {
 	return nil
 }
 
+// ToUserData to user data
 func (ls *LState) ToUserData(n int) *LUserData {
 	if lv, ok := ls.Get(n).(*LUserData); ok {
 		return lv
@@ -1643,6 +1632,7 @@ func (ls *LState) ToUserData(n int) *LUserData {
 	return nil
 }
 
+// ToThread to thread
 func (ls *LState) ToThread(n int) *LState {
 	if lv, ok := ls.Get(n).(*LState); ok {
 		return lv
@@ -1650,20 +1640,16 @@ func (ls *LState) ToThread(n int) *LState {
 	return nil
 }
 
-/* }}} */
-
-/* error & debug operations {{{ */
-
 func (ls *LState) registryOverflow() {
 	ls.RaiseError("registry overflow")
 }
 
-// This function is equivalent to luaL_error( http://www.lua.org/manual/5.1/manual.html#luaL_error ).
+// RaiseError This function is equivalent to luaL_error( http://www.lua.org/manual/5.1/manual.html#luaL_error ).
 func (ls *LState) RaiseError(format string, args ...interface{}) {
 	ls.raiseError(1, format, args...)
 }
 
-// This function is equivalent to lua_error( http://www.lua.org/manual/5.1/manual.html#lua_error ).
+// Error This function is equivalent to lua_error( http://www.lua.org/manual/5.1/manual.html#lua_error ).
 func (ls *LState) Error(lv LValue, level int) {
 	if str, ok := lv.(LString); ok {
 		ls.raiseError(level, string(str))
@@ -1676,6 +1662,7 @@ func (ls *LState) Error(lv LValue, level int) {
 	}
 }
 
+// GetInfo 获取信息
 func (ls *LState) GetInfo(what string, dbg *Debug, fn LValue) (LValue, error) {
 	if !strings.HasPrefix(what, ">") {
 		fn = dbg.frame.Fn
@@ -1684,7 +1671,7 @@ func (ls *LState) GetInfo(what string, dbg *Debug, fn LValue) (LValue, error) {
 	}
 	f, ok := fn.(*LFunction)
 	if !ok {
-		return LNil, newApiErrorS(ApiErrorRun, "can not get debug info(an object in not a function)")
+		return LNil, newAPIErrorS(APIErrorRun, "can not get debug info(an object in not a function)")
 	}
 
 	retfn := false
@@ -1722,7 +1709,7 @@ func (ls *LState) GetInfo(what string, dbg *Debug, fn LValue) (LValue, error) {
 				dbg.Name = ls.rawFrameFuncName(dbg.frame)
 			}
 		default:
-			return LNil, newApiErrorS(ApiErrorRun, "invalid what: "+string(c))
+			return LNil, newAPIErrorS(APIErrorRun, "invalid what: "+string(c))
 		}
 	}
 
@@ -1733,6 +1720,7 @@ func (ls *LState) GetInfo(what string, dbg *Debug, fn LValue) (LValue, error) {
 
 }
 
+// GetStack 获取栈
 func (ls *LState) GetStack(level int) (*Debug, bool) {
 	frame := ls.currentFrame
 	for ; level > 0 && frame != nil; frame = frame.Parent {
@@ -1750,6 +1738,7 @@ func (ls *LState) GetStack(level int) (*Debug, bool) {
 	return &Debug{}, false
 }
 
+// GetLocal get local
 func (ls *LState) GetLocal(dbg *Debug, no int) (string, LValue) {
 	frame := dbg.frame
 	if name := ls.findLocal(frame, no); len(name) > 0 {
@@ -1758,6 +1747,7 @@ func (ls *LState) GetLocal(dbg *Debug, no int) (string, LValue) {
 	return "", LNil
 }
 
+// SetLocal set local
 func (ls *LState) SetLocal(dbg *Debug, no int, lv LValue) string {
 	frame := dbg.frame
 	if name := ls.findLocal(frame, no); len(name) > 0 {
@@ -1767,6 +1757,7 @@ func (ls *LState) SetLocal(dbg *Debug, no int, lv LValue) string {
 	return ""
 }
 
+// GetUpvalue get upvalue
 func (ls *LState) GetUpvalue(fn *LFunction, no int) (string, LValue) {
 	if fn.IsG {
 		return "", LNil
@@ -1779,6 +1770,7 @@ func (ls *LState) GetUpvalue(fn *LFunction, no int) (string, LValue) {
 	return "", LNil
 }
 
+// SetUpvalue set upvalue
 func (ls *LState) SetUpvalue(fn *LFunction, no int, lv LValue) string {
 	if fn.IsG {
 		return ""
@@ -1792,10 +1784,7 @@ func (ls *LState) SetUpvalue(fn *LFunction, no int, lv LValue) string {
 	return ""
 }
 
-/* }}} */
-
-/* env operations {{{ */
-
+// GetFEnv get fenv
 func (ls *LState) GetFEnv(obj LValue) LValue {
 	switch lv := obj.(type) {
 	case *LFunction:
@@ -1808,6 +1797,7 @@ func (ls *LState) GetFEnv(obj LValue) LValue {
 	return LNil
 }
 
+// SetFEnv set fenv
 func (ls *LState) SetFEnv(obj LValue, env LValue) {
 	tb, ok := env.(*LTable)
 	if !ok {
@@ -1825,26 +1815,27 @@ func (ls *LState) SetFEnv(obj LValue, env LValue) {
 	/* do nothing */
 }
 
-/* }}} */
-
-/* table operations {{{ */
-
+// RawGet raw get
 func (ls *LState) RawGet(tb *LTable, key LValue) LValue {
 	return tb.RawGet(key)
 }
 
+// RawGetInt raw get int
 func (ls *LState) RawGetInt(tb *LTable, key int) LValue {
 	return tb.RawGetInt(key)
 }
 
+// GetField get field
 func (ls *LState) GetField(obj LValue, skey string) LValue {
 	return ls.getFieldString(obj, skey)
 }
 
+// GetTable get table
 func (ls *LState) GetTable(obj LValue, key LValue) LValue {
 	return ls.getField(obj, key)
 }
 
+// RawSet raw set
 func (ls *LState) RawSet(tb *LTable, key LValue, value LValue) {
 	if n, ok := key.(LNumber); ok && math.IsNaN(float64(n)) {
 		ls.RaiseError("table index is NaN")
@@ -1854,38 +1845,42 @@ func (ls *LState) RawSet(tb *LTable, key LValue, value LValue) {
 	tb.RawSet(key, value)
 }
 
+// RawSetInt raw set int
 func (ls *LState) RawSetInt(tb *LTable, key int, value LValue) {
 	tb.RawSetInt(key, value)
 }
 
+// SetField set field
 func (ls *LState) SetField(obj LValue, key string, value LValue) {
 	ls.setFieldString(obj, key, value)
 }
 
+// SetTable set table
 func (ls *LState) SetTable(obj LValue, key LValue, value LValue) {
 	ls.setField(obj, key, value)
 }
 
+// ForEach for each
 func (ls *LState) ForEach(tb *LTable, cb func(LValue, LValue)) {
 	tb.ForEach(cb)
 }
 
+// GetGlobal get global
 func (ls *LState) GetGlobal(name string) LValue {
 	return ls.GetField(ls.Get(GlobalsIndex), name)
 }
 
+// SetGlobal set global
 func (ls *LState) SetGlobal(name string, value LValue) {
 	ls.SetField(ls.Get(GlobalsIndex), name, value)
 }
 
+// Next next
 func (ls *LState) Next(tb *LTable, key LValue) (LValue, LValue) {
 	return tb.Next(key)
 }
 
-/* }}} */
-
-/* unary operations {{{ */
-
+// ObjLen obj len
 func (ls *LState) ObjLen(v1 LValue) int {
 	if v1.Type() == LTString {
 		return len(string(v1.(LString)))
@@ -1905,10 +1900,7 @@ func (ls *LState) ObjLen(v1 LValue) int {
 	return 0
 }
 
-/* }}} */
-
-/* binary operations {{{ */
-
+// Concat 连接
 func (ls *LState) Concat(values ...LValue) string {
 	top := ls.reg.Top()
 	for _, value := range values {
@@ -1919,46 +1911,45 @@ func (ls *LState) Concat(values ...LValue) string {
 	return LVAsString(ret)
 }
 
+// LessThan less than
 func (ls *LState) LessThan(lhs, rhs LValue) bool {
 	return lessThan(ls, lhs, rhs)
 }
 
+// Equal equal
 func (ls *LState) Equal(lhs, rhs LValue) bool {
 	return equals(ls, lhs, rhs, false)
 }
 
+// RawEqual raw equal
 func (ls *LState) RawEqual(lhs, rhs LValue) bool {
 	return equals(ls, lhs, rhs, true)
 }
 
-/* }}} */
-
-/* register operations {{{ */
-
+// Register ragister
 func (ls *LState) Register(name string, fn LGFunction) {
 	ls.SetGlobal(name, ls.NewFunction(fn))
 }
 
-/* }}} */
-
-/* load and function call operations {{{ */
-
+// Load load
 func (ls *LState) Load(reader io.Reader, name string) (*LFunction, error) {
 	chunk, err := parse.Parse(reader, name)
 	if err != nil {
-		return nil, newApiErrorE(ApiErrorSyntax, err)
+		return nil, newAPIErrorE(APIErrorSyntax, err)
 	}
 	proto, err := Compile(chunk, name)
 	if err != nil {
-		return nil, newApiErrorE(ApiErrorSyntax, err)
+		return nil, newAPIErrorE(APIErrorSyntax, err)
 	}
 	return newLFunctionL(proto, ls.currentEnv(), 0), nil
 }
 
+// Call call
 func (ls *LState) Call(nargs, nret int) {
 	ls.callR(nargs, nret, -1)
 }
 
+// PCall pcall
 func (ls *LState) PCall(nargs, nret int, errfunc *LFunction) (err error) {
 	err = nil
 	sp := ls.stack.Sp()
@@ -1973,41 +1964,41 @@ func (ls *LState) PCall(nargs, nret int, errfunc *LFunction) (err error) {
 		ls.hasErrorFunc = false
 		rcv := recover()
 		if rcv != nil {
-			if _, ok := rcv.(*ApiError); !ok {
-				err = newApiErrorS(ApiErrorPanic, fmt.Sprint(rcv))
+			if _, ok := rcv.(*APIError); !ok {
+				err = newAPIErrorS(APIErrorPanic, fmt.Sprint(rcv))
 				if ls.Options.IncludeGoStackTrace {
 					buf := make([]byte, 4096)
 					runtime.Stack(buf, false)
-					err.(*ApiError).StackTrace = strings.Trim(string(buf), "\000") + "\n" + ls.stackTrace(0)
+					err.(*APIError).StackTrace = strings.Trim(string(buf), "\000") + "\n" + ls.stackTrace(0)
 				}
 			} else {
-				err = rcv.(*ApiError)
+				err = rcv.(*APIError)
 			}
 			if errfunc != nil {
 				ls.Push(errfunc)
-				ls.Push(err.(*ApiError).Object)
+				ls.Push(err.(*APIError).Object)
 				ls.Panic = panicWithoutTraceback
 				defer func() {
 					ls.Panic = oldpanic
 					rcv := recover()
 					if rcv != nil {
-						if _, ok := rcv.(*ApiError); !ok {
-							err = newApiErrorS(ApiErrorPanic, fmt.Sprint(rcv))
+						if _, ok := rcv.(*APIError); !ok {
+							err = newAPIErrorS(APIErrorPanic, fmt.Sprint(rcv))
 							if ls.Options.IncludeGoStackTrace {
 								buf := make([]byte, 4096)
 								runtime.Stack(buf, false)
-								err.(*ApiError).StackTrace = strings.Trim(string(buf), "\000") + ls.stackTrace(0)
+								err.(*APIError).StackTrace = strings.Trim(string(buf), "\000") + ls.stackTrace(0)
 							}
 						} else {
-							err = rcv.(*ApiError)
-							err.(*ApiError).StackTrace = ls.stackTrace(0)
+							err = rcv.(*APIError)
+							err.(*APIError).StackTrace = ls.stackTrace(0)
 						}
 					}
 				}()
 				ls.Call(1, 1)
-				err = newApiError(ApiErrorError, ls.Get(-1))
-			} else if len(err.(*ApiError).StackTrace) == 0 {
-				err.(*ApiError).StackTrace = ls.stackTrace(0)
+				err = newAPIError(APIErrorError, ls.Get(-1))
+			} else if len(err.(*APIError).StackTrace) == 0 {
+				err.(*APIError).StackTrace = ls.stackTrace(0)
 			}
 			ls.stack.SetSp(sp)
 			ls.currentFrame = ls.stack.Last()
@@ -2024,12 +2015,14 @@ func (ls *LState) PCall(nargs, nret int, errfunc *LFunction) (err error) {
 	return
 }
 
+// GPCall gpcall
 func (ls *LState) GPCall(fn LGFunction, data LValue) error {
 	ls.Push(newLFunctionG(fn, ls.currentEnv(), 0))
 	ls.Push(data)
 	return ls.PCall(1, MultRet, nil)
 }
 
+// CallByParam call by param
 func (ls *LState) CallByParam(cp P, args ...LValue) error {
 	ls.Push(cp.Fn)
 	for _, arg := range args {
@@ -2043,14 +2036,12 @@ func (ls *LState) CallByParam(cp P, args ...LValue) error {
 	return nil
 }
 
-/* }}} */
-
-/* metatable operations {{{ */
-
+// GetMetatable 获取元组
 func (ls *LState) GetMetatable(obj LValue) LValue {
 	return ls.metatable(obj, false)
 }
 
+// SetMetatable 设置元组
 func (ls *LState) SetMetatable(obj LValue, mt LValue) {
 	switch mt.(type) {
 	case *LNilType, *LTable:
@@ -2068,10 +2059,7 @@ func (ls *LState) SetMetatable(obj LValue, mt LValue) {
 	}
 }
 
-/* }}} */
-
-/* coroutine operations {{{ */
-
+// Status 状态
 func (ls *LState) Status(th *LState) string {
 	status := "suspended"
 	if th.Dead {
@@ -2084,11 +2072,12 @@ func (ls *LState) Status(th *LState) string {
 	return status
 }
 
-func (ls *LState) Resume(th *LState, fn *LFunction, args ...LValue) (ResumeState, error, []LValue) {
+// Resume 重新开始
+func (ls *LState) Resume(th *LState, fn *LFunction, args ...LValue) (ResumeState, []LValue, error) {
 	isstarted := th.isStarted()
 	if !isstarted {
 		base := 0
-		th.stack.Push(callFrame{
+		th.stack.Push(CallFrame{
 			Fn:         fn,
 			Pc:         0,
 			Base:       base,
@@ -2102,10 +2091,10 @@ func (ls *LState) Resume(th *LState, fn *LFunction, args ...LValue) (ResumeState
 	}
 
 	if ls.G.CurrentThread == th {
-		return ResumeError, newApiErrorS(ApiErrorRun, "can not resume a running thread"), nil
+		return ResumeError, nil, newAPIErrorS(APIErrorRun, "can not resume a running thread")
 	}
 	if th.Dead {
-		return ResumeError, newApiErrorS(ApiErrorRun, "can not resume a dead thread"), nil
+		return ResumeError, nil, newAPIErrorS(APIErrorRun, "can not resume a dead thread")
 	}
 	th.Parent = ls
 	ls.G.CurrentThread = th
@@ -2137,13 +2126,14 @@ func (ls *LState) Resume(th *LState, fn *LFunction, args ...LValue) (ResumeState
 	ls.SetTop(top)
 
 	if haserror {
-		return ResumeError, newApiError(ApiErrorRun, ret[0]), nil
+		return ResumeError, nil, newAPIError(APIErrorRun, ret[0])
 	} else if th.stack.IsEmpty() {
-		return ResumeOK, nil, ret
+		return ResumeOK, ret, nil
 	}
-	return ResumeYield, nil, ret
+	return ResumeYield, ret, nil
 }
 
+// Yield 暂停
 func (ls *LState) Yield(values ...LValue) int {
 	ls.SetTop(0)
 	for _, lv := range values {
@@ -2152,6 +2142,7 @@ func (ls *LState) Yield(values ...LValue) int {
 	return -1
 }
 
+// XMoveTo move to
 func (ls *LState) XMoveTo(other *LState, n int) {
 	if ls == other {
 		return
@@ -2164,11 +2155,7 @@ func (ls *LState) XMoveTo(other *LState, n int) {
 	ls.SetTop(top - n)
 }
 
-/* }}} */
-
-/* GopherLua original APIs {{{ */
-
-// Set maximum memory size. This function can only be called from the main thread.
+// SetMx Set maximum memory size. This function can only be called from the main thread.
 func (ls *LState) SetMx(mx int) {
 	if ls.Parent != nil {
 		ls.RaiseError("sub threads are not allowed to set a memory limit")
@@ -2206,7 +2193,7 @@ func (ls *LState) RemoveContext() context.Context {
 	return oldctx
 }
 
-// Converts the Lua value at the given acceptable index to the chan LValue.
+// ToChannel Converts the Lua value at the given acceptable index to the chan LValue.
 func (ls *LState) ToChannel(n int) chan LValue {
 	if lv, ok := ls.Get(n).(LChannel); ok {
 		return (chan LValue)(lv)
@@ -2216,7 +2203,7 @@ func (ls *LState) ToChannel(n int) chan LValue {
 
 // RemoveCallerFrame removes the stack frame above the current stack frame. This is useful in tail calls. It returns
 // the new current frame.
-func (ls *LState) RemoveCallerFrame() *callFrame {
+func (ls *LState) RemoveCallerFrame() *CallFrame {
 	cs := ls.stack
 	sp := cs.Sp()
 	parentFrame := cs.At(sp - 2)
@@ -2228,9 +2215,3 @@ func (ls *LState) RemoveCallerFrame() *callFrame {
 	cs.Pop()
 	return parentFrame
 }
-
-/* }}} */
-
-/* }}} */
-
-//

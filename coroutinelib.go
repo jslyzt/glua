@@ -1,5 +1,6 @@
 package glua
 
+// OpenCoroutine 打开协程
 func OpenCoroutine(L *LState) int {
 	// TODO: Tie module name to contents of linit.go?
 	mod := L.RegisterModule(CoroutineLibName, coFuncs)
@@ -20,7 +21,7 @@ func coCreate(L *LState) int {
 	fn := L.CheckFunction(1)
 	newthread, _ := L.NewThread()
 	base := 0
-	newthread.stack.Push(callFrame{
+	newthread.stack.Push(CallFrame{
 		Fn:         fn,
 		Pc:         0,
 		Base:       base,

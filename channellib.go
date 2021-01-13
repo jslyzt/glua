@@ -17,6 +17,7 @@ func checkGoroutineSafe(L *LState, idx int) LValue {
 	return v
 }
 
+// OpenChannel 打开channel
 func OpenChannel(L *LState) int {
 	var mod LValue
 	//_, ok := L.G.builtinMts[int(LTChannel)]

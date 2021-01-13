@@ -1,15 +1,16 @@
-// Lua pattern match functions for Go
 package pm
 
 import (
 	"fmt"
 )
 
-const EOS = -1
-const _UNKNOWN = -2
+// 常量定义
+const (
+	EOS     = -1
+	UNKNOWN = -2
+)
 
-/* Error {{{ */
-
+// Error 错误
 type Error struct {
 	Pos     int
 	Message string
@@ -26,17 +27,14 @@ func (e *Error) Error() string {
 	switch e.Pos {
 	case EOS:
 		return fmt.Sprintf("%s at EOS", e.Message)
-	case _UNKNOWN:
+	case UNKNOWN:
 		return fmt.Sprintf("%s", e.Message)
 	default:
 		return fmt.Sprintf("%s at %d", e.Message, e.Pos)
 	}
 }
 
-/* }}} */
-
-/* MatchData {{{ */
-
+// MatchData 匹配数据
 type MatchData struct {
 	// captured positions
 	// layout
@@ -64,17 +62,24 @@ func (st *MatchData) setCapture(s, pos int) uint32 {
 	return v
 }
 
-func (st *MatchData) restoreCapture(s int, pos uint32) { st.captures[s] = pos }
+func (st *MatchData) restoreCapture(s int, pos uint32) {
+	st.captures[s] = pos
+}
 
-func (st *MatchData) CaptureLength() int { return len(st.captures) }
+// CaptureLength 长度
+func (st *MatchData) CaptureLength() int {
+	return len(st.captures)
+}
 
-func (st *MatchData) IsPosCapture(idx int) bool { return (st.captures[idx] & 1) == 1 }
+// IsPosCapture is pos capture
+func (st *MatchData) IsPosCapture(idx int) bool {
+	return (st.captures[idx] & 1) == 1
+}
 
-func (st *MatchData) Capture(idx int) int { return int(st.captures[idx] >> 1) }
-
-/* }}} */
-
-/* scanner {{{ */
+// Capture capture
+func (st *MatchData) Capture(idx int) int {
+	return int(st.captures[idx] >> 1)
+}
 
 type scannerState struct {
 	Pos     int
@@ -125,9 +130,8 @@ func (sc *scanner) NextPos() int {
 	}
 	if !sc.State.started {
 		return 0
-	} else {
-		return sc.State.Pos + 1
 	}
+	return sc.State.Pos + 1
 }
 
 func (sc *scanner) Peek() int {
@@ -151,10 +155,7 @@ func (sc *scanner) Save() { sc.saved = sc.State }
 
 func (sc *scanner) Restore() { sc.State = sc.saved }
 
-/* }}} */
-
-/* bytecode {{{ */
-
+//////////////////////////////////////////////////////////////////////////////////////////////////
 type opCode int
 
 const (
@@ -176,28 +177,34 @@ type inst struct {
 	Operand2 int
 }
 
-/* }}} */
-
-/* classes {{{ */
-
 type class interface {
 	Matches(ch int) bool
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 type dotClass struct{}
 
-func (pn *dotClass) Matches(ch int) bool { return true }
+// Matches 匹配
+func (pn *dotClass) Matches(ch int) bool {
+	return true
+}
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 type charClass struct {
 	Ch int
 }
 
-func (pn *charClass) Matches(ch int) bool { return pn.Ch == ch }
+// Matches 匹配
+func (pn *charClass) Matches(ch int) bool {
+	return pn.Ch == ch
+}
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 type singleClass struct {
 	Class int
 }
 
+// Matches 匹配
 func (pn *singleClass) Matches(ch int) bool {
 	ret := false
 	switch pn.Class {
@@ -233,11 +240,13 @@ func (pn *singleClass) Matches(ch int) bool {
 	return ret
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 type setClass struct {
 	IsNot   bool
 	Classes []class
 }
 
+// Matches 匹配
 func (pn *setClass) Matches(ch int) bool {
 	for _, class := range pn.Classes {
 		if class.Matches(ch) {
@@ -247,11 +256,13 @@ func (pn *setClass) Matches(ch int) bool {
 	return pn.IsNot
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
 type rangeClass struct {
 	Begin class
 	End   class
 }
 
+// Matches 匹配
 func (pn *rangeClass) Matches(ch int) bool {
 	switch begin := pn.Begin.(type) {
 	case *charClass:
@@ -264,10 +275,7 @@ func (pn *rangeClass) Matches(ch int) bool {
 	return false
 }
 
-// }}}
-
-// patterns {{{
-
+//////////////////////////////////////////////////////////////////////////////////////////////////
 type pattern interface{}
 
 type singlePattern struct {
@@ -299,10 +307,6 @@ type bracePattern struct {
 	Begin int
 	End   int
 }
-
-// }}}
-
-/* parse {{{ */
 
 func parseClass(sc *scanner, allowset bool) class {
 	ch := sc.Next()
@@ -518,10 +522,6 @@ func compilePattern(p pattern, ps ...*iptr) []inst {
 	return ptr.insts
 }
 
-/* }}} parse */
-
-/* VM {{{ */
-
 // Simple recursive virtual machine based on the
 // "Regular Expression Matching: the Virtual Machine Approach" (https://swtch.com/~rsc/regexp/regexp2.html)
 func recursiveVM(src []byte, insts []inst, pc, sp int, ms ...*MatchData) (bool, int, *MatchData) {
@@ -587,7 +587,7 @@ redo:
 	case opNumber:
 		idx := inst.Operand1 * 2
 		if idx >= m.CaptureLength()-1 {
-			panic(newError(_UNKNOWN, "invalid capture index"))
+			panic(newError(UNKNOWN, "invalid capture index"))
 		}
 		capture := src[m.Capture(idx):m.Capture(idx+1)]
 		for i := 0; i < len(capture); i++ {
@@ -602,10 +602,7 @@ redo:
 	panic("should not reach here")
 }
 
-/* }}} */
-
-/* API {{{ */
-
+// Find 查询
 func Find(p string, src []byte, offset, limit int) (matches []*MatchData, err error) {
 	defer func() {
 		if v := recover(); v != nil {
@@ -634,5 +631,3 @@ func Find(p string, src []byte, offset, limit int) (matches []*MatchData, err er
 	}
 	return
 }
-
-/* }}} */

@@ -281,7 +281,7 @@ Working with coroutines.
    co, _ := L.NewThread() /* create a new thread */
    fn := L.GetGlobal("coro").(*lua.LFunction) /* get function from lua */
    for {
-       st, err, values := L.Resume(co, fn)
+       st, values, err := L.Resume(co, fn)
        if st == lua.ResumeError {
            fmt.Println("yield break(error)")
            fmt.Println(err.Error())
@@ -537,11 +537,11 @@ With coroutines
 	defer cocancel()
 	fn := L.GetGlobal("coro").(*LFunction)
 
-	_, err, values := L.Resume(co, fn) // err is nil
+	_, values, err := L.Resume(co, fn) // err is nil
 
 	cancel() // cancel the parent context
 
-	_, err, values = L.Resume(co, fn) // err is NOT nil : child context was canceled
+	_, values, err = L.Resume(co, fn) // err is NOT nil : child context was canceled
 
 **Note that using a context causes performance degradation.**
 

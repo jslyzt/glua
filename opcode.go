@@ -21,83 +21,87 @@ import (
   +---------------------------------------------+
 */
 
-const opInvalidInstruction = ^uint32(0)
-
-const opSizeCode = 6
-const opSizeA = 8
-const opSizeB = 9
-const opSizeC = 9
-const opSizeBx = 18
-const opSizesBx = 18
-
-const opMaxArgsA = (1 << opSizeA) - 1
-const opMaxArgsB = (1 << opSizeB) - 1
-const opMaxArgsC = (1 << opSizeC) - 1
-const opMaxArgBx = (1 << opSizeBx) - 1
-const opMaxArgSbx = opMaxArgBx >> 1
-
 const (
-	OP_MOVE     int = iota /*      A B     R(A) := R(B)                            */
-	OP_MOVEN               /*      A B     R(A) := R(B); followed by R(C) MOVE ops */
-	OP_LOADK               /*     A Bx    R(A) := Kst(Bx)                          */
-	OP_LOADBOOL            /*  A B C   R(A) := (Bool)B; if (C) pc++                */
-	OP_LOADNIL             /*   A B     R(A) := ... := R(B) := nil                 */
-	OP_GETUPVAL            /*  A B     R(A) := UpValue[B]                          */
+	opInvalidInstruction = ^uint32(0)
 
-	OP_GETGLOBAL  /* A Bx    R(A) := Gbl[Kst(Bx)]                            */
-	OP_GETTABLE   /*  A B C   R(A) := R(B)[RK(C)]                             */
-	OP_GETTABLEKS /*  A B C   R(A) := R(B)[RK(C)] ; RK(C) is constant string */
+	opSizeCode = 6
+	opSizeA    = 8
+	opSizeB    = 9
+	opSizeC    = 9
+	opSizeBx   = 18
+	opSizesBx  = 18
 
-	OP_SETGLOBAL  /* A Bx    Gbl[Kst(Bx)] := R(A)                            */
-	OP_SETUPVAL   /*  A B     UpValue[B] := R(A)                              */
-	OP_SETTABLE   /*  A B C   R(A)[RK(B)] := RK(C)                            */
-	OP_SETTABLEKS /*  A B C   R(A)[RK(B)] := RK(C) ; RK(B) is constant string */
-
-	OP_NEWTABLE /*  A B C   R(A) := {} (size = BC)                         */
-
-	OP_SELF /*      A B C   R(A+1) := R(B); R(A) := R(B)[RK(C)]             */
-
-	OP_ADD /*       A B C   R(A) := RK(B) + RK(C)                           */
-	OP_SUB /*       A B C   R(A) := RK(B) - RK(C)                           */
-	OP_MUL /*       A B C   R(A) := RK(B) * RK(C)                           */
-	OP_DIV /*       A B C   R(A) := RK(B) / RK(C)                           */
-	OP_MOD /*       A B C   R(A) := RK(B) % RK(C)                           */
-	OP_POW /*       A B C   R(A) := RK(B) ^ RK(C)                           */
-	OP_UNM /*       A B     R(A) := -R(B)                                   */
-	OP_NOT /*       A B     R(A) := not R(B)                                */
-	OP_LEN /*       A B     R(A) := length of R(B)                          */
-
-	OP_CONCAT /*    A B C   R(A) := R(B).. ... ..R(C)                       */
-
-	OP_JMP /*       sBx     pc+=sBx                                 */
-
-	OP_EQ /*        A B C   if ((RK(B) == RK(C)) ~= A) then pc++            */
-	OP_LT /*        A B C   if ((RK(B) <  RK(C)) ~= A) then pc++            */
-	OP_LE /*        A B C   if ((RK(B) <= RK(C)) ~= A) then pc++            */
-
-	OP_TEST    /*      A C     if not (R(A) <=> C) then pc++                   */
-	OP_TESTSET /*   A B C   if (R(B) <=> C) then R(A) := R(B) else pc++     */
-
-	OP_CALL     /*      A B C   R(A) ... R(A+C-2) := R(A)(R(A+1) ... R(A+B-1)) */
-	OP_TAILCALL /*  A B C   return R(A)(R(A+1) ... R(A+B-1))              */
-	OP_RETURN   /*    A B     return R(A) ... R(A+B-2)      (see note)      */
-
-	OP_FORLOOP /*   A sBx   R(A)+=R(A+2);
-	     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
-	OP_FORPREP /*   A sBx   R(A)-=R(A+2); pc+=sBx                           */
-
-	OP_TFORLOOP /*  A C     R(A+3) ... R(A+3+C) := R(A)(R(A+1) R(A+2));
-	    if R(A+3) ~= nil then { pc++; R(A+2)=R(A+3); }  */
-	OP_SETLIST /*   A B C   R(A)[(C-1)*FPF+i] := R(A+i) 1 <= i <= B        */
-
-	OP_CLOSE   /*     A       close all variables in the stack up to (>=) R(A)*/
-	OP_CLOSURE /*   A Bx    R(A) := closure(KPROTO[Bx] R(A) ... R(A+n))  */
-
-	OP_VARARG /*     A B     R(A) R(A+1) ... R(A+B-1) = vararg            */
-
-	OP_NOP /* NOP */
+	opMaxArgsA  = (1 << opSizeA) - 1
+	opMaxArgsB  = (1 << opSizeB) - 1
+	opMaxArgsC  = (1 << opSizeC) - 1
+	opMaxArgBx  = (1 << opSizeBx) - 1
+	opMaxArgSbx = opMaxArgBx >> 1
 )
-const opCodeMax = OP_NOP
+
+// 操作码定义
+const (
+	OPMove     int = iota /*      A B     R(A) := R(B)                            */
+	OPMoven               /*      A B     R(A) := R(B); followed by R(C) MOVE ops */
+	OPLoadk               /*     A Bx    R(A) := Kst(Bx)                          */
+	OPLoadBool            /*  A B C   R(A) := (Bool)B; if (C) pc++                */
+	OPLoadNil             /*   A B     R(A) := ... := R(B) := nil                 */
+	OPGetUpval            /*  A B     R(A) := UpValue[B]                          */
+
+	OPGetGlobal  /* A Bx    R(A) := Gbl[Kst(Bx)]                            */
+	OPGetTable   /*  A B C   R(A) := R(B)[RK(C)]                             */
+	OPGetTableks /*  A B C   R(A) := R(B)[RK(C)] ; RK(C) is constant string */
+
+	OPSetGlobal  /* A Bx    Gbl[Kst(Bx)] := R(A)                            */
+	OPSetUpval   /*  A B     UpValue[B] := R(A)                              */
+	OPSetTable   /*  A B C   R(A)[RK(B)] := RK(C)                            */
+	OPSetTableks /*  A B C   R(A)[RK(B)] := RK(C) ; RK(B) is constant string */
+
+	OPNewTable /*  A B C   R(A) := {} (size = BC)                         */
+
+	OPSelf /*      A B C   R(A+1) := R(B); R(A) := R(B)[RK(C)]             */
+
+	OPAdd /*       A B C   R(A) := RK(B) + RK(C)                           */
+	OPSub /*       A B C   R(A) := RK(B) - RK(C)                           */
+	OPMul /*       A B C   R(A) := RK(B) * RK(C)                           */
+	OPDiv /*       A B C   R(A) := RK(B) / RK(C)                           */
+	OPMod /*       A B C   R(A) := RK(B) % RK(C)                           */
+	OPPow /*       A B C   R(A) := RK(B) ^ RK(C)                           */
+	OPUnm /*       A B     R(A) := -R(B)                                   */
+	OPNot /*       A B     R(A) := not R(B)                                */
+	OPLen /*       A B     R(A) := length of R(B)                          */
+
+	OPConcat /*    A B C   R(A) := R(B).. ... ..R(C)                       */
+
+	OPJmp /*       sBx     pc+=sBx                                 */
+
+	OPEQ /*        A B C   if ((RK(B) == RK(C)) ~= A) then pc++            */
+	OPLT /*        A B C   if ((RK(B) <  RK(C)) ~= A) then pc++            */
+	OPLE /*        A B C   if ((RK(B) <= RK(C)) ~= A) then pc++            */
+
+	OPTest    /*      A C     if not (R(A) <=> C) then pc++                   */
+	OPTestSet /*   A B C   if (R(B) <=> C) then R(A) := R(B) else pc++     */
+
+	OPCall     /*      A B C   R(A) ... R(A+C-2) := R(A)(R(A+1) ... R(A+B-1)) */
+	OPTailCall /*  A B C   return R(A)(R(A+1) ... R(A+B-1))              */
+	OPReturn   /*    A B     return R(A) ... R(A+B-2)      (see note)      */
+
+	OPForLoop /*   A sBx   R(A)+=R(A+2);
+	     if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
+	OPForPrep /*   A sBx   R(A)-=R(A+2); pc+=sBx                           */
+
+	OPTForLoop /*  A C     R(A+3) ... R(A+3+C) := R(A)(R(A+1) R(A+2));
+	    if R(A+3) ~= nil then { pc++; R(A+2)=R(A+3); }  */
+	OPSetList /*   A B C   R(A)[(C-1)*FPF+i] := R(A+i) 1 <= i <= B        */
+
+	OPClose   /*     A       close all variables in the stack up to (>=) R(A)*/
+	OPClosure /*   A Bx    R(A) := closure(KPROTO[Bx] R(A) ... R(A+n))  */
+
+	OPVarArg /*     A B     R(A) R(A+1) ... R(A+B-1) = vararg            */
+
+	OPNop /* NOP */
+)
+
+const opCodeMax = OPNop
 
 type opArgMode int
 
@@ -282,89 +286,89 @@ func opToString(inst uint32) string {
 	}
 
 	switch op {
-	case OP_MOVE:
+	case OPMove:
 		buf += fmt.Sprintf("; R(%v) := R(%v)", arga, argb)
-	case OP_MOVEN:
+	case OPMoven:
 		buf += fmt.Sprintf("; R(%v) := R(%v); followed by %v MOVE ops", arga, argb, argc)
-	case OP_LOADK:
+	case OPLoadk:
 		buf += fmt.Sprintf("; R(%v) := Kst(%v)", arga, argbx)
-	case OP_LOADBOOL:
+	case OPLoadBool:
 		buf += fmt.Sprintf("; R(%v) := (Bool)%v; if (%v) pc++", arga, argb, argc)
-	case OP_LOADNIL:
+	case OPLoadNil:
 		buf += fmt.Sprintf("; R(%v) := ... := R(%v) := nil", arga, argb)
-	case OP_GETUPVAL:
+	case OPGetUpval:
 		buf += fmt.Sprintf("; R(%v) := UpValue[%v]", arga, argb)
-	case OP_GETGLOBAL:
+	case OPGetGlobal:
 		buf += fmt.Sprintf("; R(%v) := Gbl[Kst(%v)]", arga, argbx)
-	case OP_GETTABLE:
+	case OPGetTable:
 		buf += fmt.Sprintf("; R(%v) := R(%v)[RK(%v)]", arga, argb, argc)
-	case OP_GETTABLEKS:
+	case OPGetTableks:
 		buf += fmt.Sprintf("; R(%v) := R(%v)[RK(%v)] ; RK(%v) is constant string", arga, argb, argc, argc)
-	case OP_SETGLOBAL:
+	case OPSetGlobal:
 		buf += fmt.Sprintf("; Gbl[Kst(%v)] := R(%v)", argbx, arga)
-	case OP_SETUPVAL:
+	case OPSetUpval:
 		buf += fmt.Sprintf("; UpValue[%v] := R(%v)", argb, arga)
-	case OP_SETTABLE:
+	case OPSetTable:
 		buf += fmt.Sprintf("; R(%v)[RK(%v)] := RK(%v)", arga, argb, argc)
-	case OP_SETTABLEKS:
+	case OPSetTableks:
 		buf += fmt.Sprintf("; R(%v)[RK(%v)] := RK(%v) ; RK(%v) is constant string", arga, argb, argc, argb)
-	case OP_NEWTABLE:
+	case OPNewTable:
 		buf += fmt.Sprintf("; R(%v) := {} (size = BC)", arga)
-	case OP_SELF:
+	case OPSelf:
 		buf += fmt.Sprintf("; R(%v+1) := R(%v); R(%v) := R(%v)[RK(%v)]", arga, argb, arga, argb, argc)
-	case OP_ADD:
+	case OPAdd:
 		buf += fmt.Sprintf("; R(%v) := RK(%v) + RK(%v)", arga, argb, argc)
-	case OP_SUB:
+	case OPSub:
 		buf += fmt.Sprintf("; R(%v) := RK(%v) - RK(%v)", arga, argb, argc)
-	case OP_MUL:
+	case OPMul:
 		buf += fmt.Sprintf("; R(%v) := RK(%v) * RK(%v)", arga, argb, argc)
-	case OP_DIV:
+	case OPDiv:
 		buf += fmt.Sprintf("; R(%v) := RK(%v) / RK(%v)", arga, argb, argc)
-	case OP_MOD:
+	case OPMod:
 		buf += fmt.Sprintf("; R(%v) := RK(%v) %% RK(%v)", arga, argb, argc)
-	case OP_POW:
+	case OPPow:
 		buf += fmt.Sprintf("; R(%v) := RK(%v) ^ RK(%v)", arga, argb, argc)
-	case OP_UNM:
+	case OPUnm:
 		buf += fmt.Sprintf("; R(%v) := -R(%v)", arga, argb)
-	case OP_NOT:
+	case OPNot:
 		buf += fmt.Sprintf("; R(%v) := not R(%v)", arga, argb)
-	case OP_LEN:
+	case OPLen:
 		buf += fmt.Sprintf("; R(%v) := length of R(%v)", arga, argb)
-	case OP_CONCAT:
+	case OPConcat:
 		buf += fmt.Sprintf("; R(%v) := R(%v).. ... ..R(%v)", arga, argb, argc)
-	case OP_JMP:
+	case OPJmp:
 		buf += fmt.Sprintf("; pc+=%v", argsbx)
-	case OP_EQ:
+	case OPEQ:
 		buf += fmt.Sprintf("; if ((RK(%v) == RK(%v)) ~= %v) then pc++", argb, argc, arga)
-	case OP_LT:
+	case OPLT:
 		buf += fmt.Sprintf("; if ((RK(%v) <  RK(%v)) ~= %v) then pc++", argb, argc, arga)
-	case OP_LE:
+	case OPLE:
 		buf += fmt.Sprintf("; if ((RK(%v) <= RK(%v)) ~= %v) then pc++", argb, argc, arga)
-	case OP_TEST:
+	case OPTest:
 		buf += fmt.Sprintf("; if not (R(%v) <=> %v) then pc++", arga, argc)
-	case OP_TESTSET:
+	case OPTestSet:
 		buf += fmt.Sprintf("; if (R(%v) <=> %v) then R(%v) := R(%v) else pc++", argb, argc, arga, argb)
-	case OP_CALL:
+	case OPCall:
 		buf += fmt.Sprintf("; R(%v) ... R(%v+%v-2) := R(%v)(R(%v+1) ... R(%v+%v-1))", arga, arga, argc, arga, arga, arga, argb)
-	case OP_TAILCALL:
+	case OPTailCall:
 		buf += fmt.Sprintf("; return R(%v)(R(%v+1) ... R(%v+%v-1))", arga, arga, arga, argb)
-	case OP_RETURN:
+	case OPReturn:
 		buf += fmt.Sprintf("; return R(%v) ... R(%v+%v-2)", arga, arga, argb)
-	case OP_FORLOOP:
+	case OPForLoop:
 		buf += fmt.Sprintf("; R(%v)+=R(%v+2); if R(%v) <?= R(%v+1) then { pc+=%v; R(%v+3)=R(%v) }", arga, arga, arga, arga, argsbx, arga, arga)
-	case OP_FORPREP:
+	case OPForPrep:
 		buf += fmt.Sprintf("; R(%v)-=R(%v+2); pc+=%v", arga, arga, argsbx)
-	case OP_TFORLOOP:
+	case OPTForLoop:
 		buf += fmt.Sprintf("; R(%v+3) ... R(%v+3+%v) := R(%v)(R(%v+1) R(%v+2)); if R(%v+3) ~= nil then { pc++; R(%v+2)=R(%v+3); }", arga, arga, argc, arga, arga, arga, arga, arga, arga)
-	case OP_SETLIST:
+	case OPSetList:
 		buf += fmt.Sprintf("; R(%v)[(%v-1)*FPF+i] := R(%v+i) 1 <= i <= %v", arga, argc, arga, argb)
-	case OP_CLOSE:
+	case OPClose:
 		buf += fmt.Sprintf("; close all variables in the stack up to (>=) R(%v)", arga)
-	case OP_CLOSURE:
+	case OPClosure:
 		buf += fmt.Sprintf("; R(%v) := closure(KPROTO[%v] R(%v) ... R(%v+n))", arga, argbx, arga, arga)
-	case OP_VARARG:
+	case OPVarArg:
 		buf += fmt.Sprintf(";  R(%v) R(%v+1) ... R(%v+%v-1) = vararg", arga, arga, arga, argb)
-	case OP_NOP:
+	case OPNop:
 		/* nothing to do */
 	}
 	return buf

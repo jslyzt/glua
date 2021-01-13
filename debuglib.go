@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// OpenDebug 打开调试
 func OpenDebug(L *LState) int {
 	dbgmod := L.RegisterModule(DebugLibName, debugFuncs)
 	L.Push(dbgmod)

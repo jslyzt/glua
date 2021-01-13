@@ -16,17 +16,20 @@ func main() {
 }
 
 func mainAux() int {
-	var opt_e, opt_l, opt_p string
-	var opt_i, opt_v, opt_dt, opt_dc bool
-	var opt_m int
-	flag.StringVar(&opt_e, "e", "", "")
-	flag.StringVar(&opt_l, "l", "", "")
-	flag.StringVar(&opt_p, "p", "", "")
-	flag.IntVar(&opt_m, "mx", 0, "")
-	flag.BoolVar(&opt_i, "i", false, "")
-	flag.BoolVar(&opt_v, "v", false, "")
-	flag.BoolVar(&opt_dt, "dt", false, "")
-	flag.BoolVar(&opt_dc, "dc", false, "")
+	var (
+		opte, optl, optp         string
+		opti, optv, optdt, optdc bool
+		optm                     int
+	)
+
+	flag.StringVar(&opte, "e", "", "")
+	flag.StringVar(&optl, "l", "", "")
+	flag.StringVar(&optp, "p", "", "")
+	flag.IntVar(&optm, "mx", 0, "")
+	flag.BoolVar(&opti, "i", false, "")
+	flag.BoolVar(&optv, "v", false, "")
+	flag.BoolVar(&optdt, "dt", false, "")
+	flag.BoolVar(&optdc, "dc", false, "")
 	flag.Usage = func() {
 		fmt.Println(`Usage: glua [options] [script [args]].
 Available options are:
@@ -40,8 +43,8 @@ Available options are:
   -v       show version information`)
 	}
 	flag.Parse()
-	if len(opt_p) != 0 {
-		f, err := os.Create(opt_p)
+	if len(optp) != 0 {
+		f, err := os.Create(optp)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
@@ -49,24 +52,24 @@ Available options are:
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
-	if len(opt_e) == 0 && !opt_i && !opt_v && flag.NArg() == 0 {
-		opt_i = true
+	if len(opte) == 0 && !opti && !optv && flag.NArg() == 0 {
+		opti = true
 	}
 
 	status := 0
 
 	L := lua.NewState()
 	defer L.Close()
-	if opt_m > 0 {
-		L.SetMx(opt_m)
+	if optm > 0 {
+		L.SetMx(optm)
 	}
 
-	if opt_v || opt_i {
+	if optv || opti {
 		fmt.Println(lua.PackageCopyRight)
 	}
 
-	if len(opt_l) > 0 {
-		if err := L.DoFile(opt_l); err != nil {
+	if len(optl) > 0 {
+		if err := L.DoFile(optl); err != nil {
 			fmt.Println(err.Error())
 		}
 	}
@@ -78,7 +81,7 @@ Available options are:
 			L.RawSet(argtb, lua.LNumber(i), lua.LString(flag.Arg(i)))
 		}
 		L.SetGlobal("arg", argtb)
-		if opt_dt || opt_dc {
+		if optdt || optdc {
 			file, err := os.Open(script)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -89,10 +92,10 @@ Available options are:
 				fmt.Println(err2.Error())
 				return 1
 			}
-			if opt_dt {
+			if optdt {
 				fmt.Println(parse.Dump(chunk))
 			}
-			if opt_dc {
+			if optdc {
 				proto, err3 := lua.Compile(chunk, script)
 				if err3 != nil {
 					fmt.Println(err3.Error())
@@ -107,14 +110,14 @@ Available options are:
 		}
 	}
 
-	if len(opt_e) > 0 {
-		if err := L.DoString(opt_e); err != nil {
+	if len(opte) > 0 {
+		if err := L.DoString(opte); err != nil {
 			fmt.Println(err.Error())
 			status = 1
 		}
 	}
 
-	if opt_i {
+	if opti {
 		doREPL(L)
 	}
 	return status
@@ -140,7 +143,7 @@ func doREPL(L *lua.LState) {
 }
 
 func incomplete(err error) bool {
-	if lerr, ok := err.(*lua.ApiError); ok {
+	if lerr, ok := err.(*lua.APIError); ok {
 		if perr, ok := lerr.Cause.(*parse.Error); ok {
 			return perr.Pos.Line == parse.EOF
 		}
@@ -150,15 +153,14 @@ func incomplete(err error) bool {
 
 func loadline(rl *readline.Instance, L *lua.LState) (string, error) {
 	rl.SetPrompt("> ")
-	if line, err := rl.Readline(); err == nil {
+	line, err := rl.Readline()
+	if err == nil {
 		if _, err := L.LoadString("return " + line); err == nil { // try add return <...> then compile
 			return line, nil
-		} else {
-			return multiline(line, rl, L)
 		}
-	} else {
-		return "", err
+		return multiline(line, rl, L)
 	}
+	return "", err
 }
 
 func multiline(ml string, rl *readline.Instance, L *lua.LState) (string, error) {

@@ -5,23 +5,27 @@ import (
 	"strings"
 )
 
+// 常量定义
 const (
 	VarArgHasArg   uint8 = 1
 	VarArgIsVarArg uint8 = 2
 	VarArgNeedsArg uint8 = 4
 )
 
+// DbgLocalInfo 调试位置信息
 type DbgLocalInfo struct {
 	Name    string
 	StartPc int
 	EndPc   int
 }
 
+// DbgCall 调试回调
 type DbgCall struct {
 	Name string
 	Pc   int
 }
 
+// FunctionProto 函数信息
 type FunctionProto struct {
 	SourceName         string
 	LineDefined        int
@@ -42,8 +46,7 @@ type FunctionProto struct {
 	stringConstants []string
 }
 
-/* Upvalue {{{ */
-
+// Upvalue upvalue
 type Upvalue struct {
 	next   *Upvalue
 	reg    *registry
@@ -52,6 +55,7 @@ type Upvalue struct {
 	closed bool
 }
 
+// Value 值
 func (uv *Upvalue) Value() LValue {
 	//if uv.IsClosed() {
 	if uv.closed || uv.reg == nil {
@@ -61,6 +65,7 @@ func (uv *Upvalue) Value() LValue {
 	return uv.reg.array[uv.index]
 }
 
+// SetValue 设置值
 func (uv *Upvalue) SetValue(value LValue) {
 	if uv.IsClosed() {
 		uv.value = value
@@ -69,23 +74,22 @@ func (uv *Upvalue) SetValue(value LValue) {
 	}
 }
 
+// Close 关闭
 func (uv *Upvalue) Close() {
 	value := uv.Value()
 	uv.closed = true
 	uv.value = value
 }
 
+// IsClosed 是否关闭
 func (uv *Upvalue) IsClosed() bool {
 	return uv.closed || uv.reg == nil
 }
 
+// UpvalueIndex index
 func UpvalueIndex(i int) int {
 	return GlobalsIndex - i
 }
-
-/* }}} */
-
-/* FunctionProto {{{ */
 
 func newFunctionProto(name string) *FunctionProto {
 	return &FunctionProto{
@@ -134,7 +138,7 @@ func (fp *FunctionProto) str(level int, count int) string {
 	protono := 0
 	for no, code := range fp.Code {
 		inst := opGetOpCode(code)
-		if inst == OP_CLOSURE {
+		if inst == OPClosure {
 			buf = append(buf, "\n")
 			buf = append(buf, fp.FunctionPrototypes[protono].str(level+1, protono))
 			buf = append(buf, "\n")
@@ -147,10 +151,6 @@ func (fp *FunctionProto) str(level int, count int) string {
 	buf = append(buf, fmt.Sprintf("%v; end of function\n", indent))
 	return strings.Join(buf, "")
 }
-
-/* }}} */
-
-/* LFunction {{{ */
 
 func newLFunctionL(proto *FunctionProto, env *LTable, nupvalue int) *LFunction {
 	return &LFunction{
@@ -174,6 +174,7 @@ func newLFunctionG(gfunc LGFunction, env *LTable, nupvalue int) *LFunction {
 	}
 }
 
+// LocalName 本地名称
 func (fn *LFunction) LocalName(regno, pc int) (string, bool) {
 	if fn.IsG {
 		return "", false
@@ -189,5 +190,3 @@ func (fn *LFunction) LocalName(regno, pc int) (string, bool) {
 	}
 	return "", false
 }
-
-/* }}} */

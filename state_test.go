@@ -281,7 +281,6 @@ func TestPCall(t *testing.T) {
 	defer L.Close()
 	L.Register("f1", func(L *LState) int {
 		panic("panic!")
-		return 0
 	})
 	errorIfScriptNotFail(t, L, `f1()`, "panic!")
 	L.Push(L.GetGlobal("f1"))
@@ -299,7 +298,6 @@ func TestPCall(t *testing.T) {
 
 	err = L.PCall(0, 0, L.NewFunction(func(L *LState) int {
 		panic("panicc!")
-		return 1
 	}))
 	errorIfFalse(t, strings.Contains(err.Error(), "panicc!"), "")
 }
@@ -319,7 +317,7 @@ func TestCoroutineApi1(t *testing.T) {
       end
     `)
 	fn := L.GetGlobal("coro").(*LFunction)
-	st, err, values := L.Resume(co, fn, LNumber(10))
+	st, values, err := L.Resume(co, fn, LNumber(10))
 	errorIfNotEqual(t, ResumeYield, st)
 	errorIfNotNil(t, err)
 	errorIfNotEqual(t, 3, len(values))
@@ -327,13 +325,13 @@ func TestCoroutineApi1(t *testing.T) {
 	errorIfNotEqual(t, LNumber(2), values[1].(LNumber))
 	errorIfNotEqual(t, LNumber(3), values[2].(LNumber))
 
-	st, err, values = L.Resume(co, fn, LNumber(11), LNumber(12))
+	st, values, err = L.Resume(co, fn, LNumber(11), LNumber(12))
 	errorIfNotEqual(t, ResumeYield, st)
 	errorIfNotNil(t, err)
 	errorIfNotEqual(t, 1, len(values))
 	errorIfNotEqual(t, LNumber(4), values[0].(LNumber))
 
-	st, err, values = L.Resume(co, fn)
+	st, values, err = L.Resume(co, fn)
 	errorIfNotEqual(t, ResumeOK, st)
 	errorIfNotNil(t, err)
 	errorIfNotEqual(t, 1, len(values))
@@ -351,7 +349,7 @@ func TestCoroutineApi1(t *testing.T) {
     `)
 	fn = L.GetGlobal("coro_error").(*LFunction)
 	co, _ = L.NewThread()
-	st, err, values = L.Resume(co, fn)
+	st, values, err = L.Resume(co, fn)
 	errorIfNotEqual(t, ResumeYield, st)
 	errorIfNotNil(t, err)
 	errorIfNotEqual(t, 3, len(values))
@@ -359,17 +357,17 @@ func TestCoroutineApi1(t *testing.T) {
 	errorIfNotEqual(t, LNumber(2), values[1].(LNumber))
 	errorIfNotEqual(t, LNumber(3), values[2].(LNumber))
 
-	st, err, values = L.Resume(co, fn)
+	st, values, err = L.Resume(co, fn)
 	errorIfNotEqual(t, ResumeYield, st)
 	errorIfNotNil(t, err)
 	errorIfNotEqual(t, 1, len(values))
 	errorIfNotEqual(t, LNumber(4), values[0].(LNumber))
 
-	st, err, values = L.Resume(co, fn)
+	st, values, err = L.Resume(co, fn)
 	errorIfNotEqual(t, ResumeError, st)
 	errorIfNil(t, err)
 	errorIfFalse(t, strings.Contains(err.Error(), "--failed--"), "error message must be '--failed--'")
-	st, err, values = L.Resume(co, fn)
+	st, values, err = L.Resume(co, fn)
 	errorIfNotEqual(t, ResumeError, st)
 	errorIfNil(t, err)
 	errorIfFalse(t, strings.Contains(err.Error(), "can not resume a dead thread"), "can not resume a dead thread")
@@ -441,12 +439,12 @@ func TestContextWithCroutine(t *testing.T) {
 	co, cocancel := L.NewThread()
 	defer cocancel()
 	fn := L.GetGlobal("coro").(*LFunction)
-	_, err, values := L.Resume(co, fn)
+	_, values, err := L.Resume(co, fn)
 	errorIfNotNil(t, err)
 	errorIfNotEqual(t, LNumber(0), values[0])
 	// cancel the parent context
 	cancel()
-	_, err, values = L.Resume(co, fn)
+	_, values, err = L.Resume(co, fn)
 	errorIfNil(t, err)
 	errorIfFalse(t, strings.Contains(err.Error(), "context canceled"), "coroutine execution must be canceled when the parent context is canceled")
 
@@ -533,7 +531,7 @@ func BenchmarkCallFrameStackPushPopAutoGrow(t *testing.B) {
 	const Iterations = 256
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		for i := 0; i < Iterations; i++ {
 			stack.Pop()
@@ -549,7 +547,7 @@ func BenchmarkCallFrameStackPushPopFixed(t *testing.B) {
 	const Iterations = 256
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		for i := 0; i < Iterations; i++ {
 			stack.Pop()
@@ -566,7 +564,7 @@ func BenchmarkCallFrameStackPushPopShallowAutoGrow(t *testing.B) {
 	const Iterations = 8
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		for i := 0; i < Iterations; i++ {
 			stack.Pop()
@@ -582,7 +580,7 @@ func BenchmarkCallFrameStackPushPopShallowFixed(t *testing.B) {
 	const Iterations = 8
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		for i := 0; i < Iterations; i++ {
 			stack.Pop()
@@ -598,7 +596,7 @@ func BenchmarkCallFrameStackPushPopFixedNoInterface(t *testing.B) {
 	const Iterations = 256
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		for i := 0; i < Iterations; i++ {
 			stack.Pop()
@@ -614,7 +612,7 @@ func BenchmarkCallFrameStackUnwindAutoGrow(t *testing.B) {
 	const Iterations = 256
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		stack.SetSp(0)
 	}
@@ -628,7 +626,7 @@ func BenchmarkCallFrameStackUnwindFixed(t *testing.B) {
 	const Iterations = 256
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		stack.SetSp(0)
 	}
@@ -642,7 +640,7 @@ func BenchmarkCallFrameStackUnwindFixedNoInterface(t *testing.B) {
 	const Iterations = 256
 	for j := 0; j < t.N; j++ {
 		for i := 0; i < Iterations; i++ {
-			stack.Push(callFrame{})
+			stack.Push(CallFrame{})
 		}
 		stack.SetSp(0)
 	}

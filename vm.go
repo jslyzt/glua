@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-func mainLoop(L *LState, baseframe *callFrame) {
+func mainLoop(L *LState, baseframe *CallFrame) {
 	var inst uint32
-	var cf *callFrame
+	var cf *CallFrame
 
 	if L.stack.IsEmpty() {
 		return
@@ -34,9 +34,9 @@ func mainLoop(L *LState, baseframe *callFrame) {
 	}
 }
 
-func mainLoopWithContext(L *LState, baseframe *callFrame) {
+func mainLoopWithContext(L *LState, baseframe *CallFrame) {
 	var inst uint32
-	var cf *callFrame
+	var cf *CallFrame
 
 	if L.stack.IsEmpty() {
 		return
@@ -272,7 +272,7 @@ func threadRun(L *LState) {
 	defer func() {
 		if rcv := recover(); rcv != nil {
 			var lv LValue
-			if v, ok := rcv.(*ApiError); ok {
+			if v, ok := rcv.(*APIError); ok {
 				lv = v.Object
 			} else {
 				lv = LString(fmt.Sprint(rcv))
@@ -294,13 +294,13 @@ func threadRun(L *LState) {
 	L.mainLoop(L, nil)
 }
 
-type instFunc func(*LState, uint32, *callFrame) int
+type instFunc func(*LState, uint32, *CallFrame) int
 
 var jumpTable [opCodeMax + 1]instFunc
 
 func init() {
 	jumpTable = [opCodeMax + 1]instFunc{
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_MOVE
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OPMove
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -310,7 +310,7 @@ func init() {
 			reg.Set(RA, reg.Get(lbase+B))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_MOVEN
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OPMoven
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -330,7 +330,7 @@ func init() {
 			cf.Pc = pc
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_LOADK
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OPLoadk
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -340,7 +340,7 @@ func init() {
 			reg.Set(RA, cf.Fn.Proto.Constants[Bx])
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_LOADBOOL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_LOADBOOL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -358,7 +358,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_LOADNIL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_LOADNIL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -370,7 +370,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_GETUPVAL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_GETUPVAL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -380,7 +380,7 @@ func init() {
 			reg.Set(RA, cf.Fn.Upvalues[B].Value())
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_GETGLOBAL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_GETGLOBAL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -391,7 +391,7 @@ func init() {
 			reg.Set(RA, L.getFieldString(cf.Fn.Env, cf.Fn.Proto.stringConstants[Bx]))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_GETTABLE
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_GETTABLE
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -402,7 +402,7 @@ func init() {
 			reg.Set(RA, L.getField(reg.Get(lbase+B), L.rkValue(C)))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_GETTABLEKS
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_GETTABLEKS
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -413,7 +413,7 @@ func init() {
 			reg.Set(RA, L.getFieldString(reg.Get(lbase+B), L.rkString(C)))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_SETGLOBAL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_SETGLOBAL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -424,7 +424,7 @@ func init() {
 			L.setFieldString(cf.Fn.Env, cf.Fn.Proto.stringConstants[Bx], reg.Get(RA))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_SETUPVAL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_SETUPVAL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -434,7 +434,7 @@ func init() {
 			cf.Fn.Upvalues[B].SetValue(reg.Get(RA))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_SETTABLE
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_SETTABLE
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -445,7 +445,7 @@ func init() {
 			L.setField(reg.Get(RA), L.rkValue(B), L.rkValue(C))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_SETTABLEKS
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_SETTABLEKS
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -456,7 +456,7 @@ func init() {
 			L.setFieldString(reg.Get(RA), L.rkString(B), L.rkValue(C))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_NEWTABLE
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_NEWTABLE
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -467,7 +467,7 @@ func init() {
 			reg.Set(RA, newLTable(B, C))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_SELF
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_SELF
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -486,7 +486,7 @@ func init() {
 		opArith, // OP_DIV
 		opArith, // OP_MOD
 		opArith, // OP_POW
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_UNM
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_UNM
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -515,7 +515,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_NOT
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_NOT
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -529,7 +529,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_LEN
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_LEN
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -559,7 +559,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_CONCAT
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_CONCAT
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -572,13 +572,13 @@ func init() {
 			reg.Set(RA, stringConcat(L, RC-RB+1, RC))
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_JMP
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_JMP
 			cf := L.currentFrame
 			Sbx := int(inst&0x3ffff) - opMaxArgSbx //GETSBX
 			cf.Pc += Sbx
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_EQ
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_EQ
 			cf := L.currentFrame
 			A := int(inst>>18) & 0xff //GETA
 			B := int(inst & 0x1ff)    //GETB
@@ -593,7 +593,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_LT
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_LT
 			cf := L.currentFrame
 			A := int(inst>>18) & 0xff //GETA
 			B := int(inst & 0x1ff)    //GETB
@@ -608,7 +608,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_LE
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_LE
 			cf := L.currentFrame
 			A := int(inst>>18) & 0xff //GETA
 			B := int(inst & 0x1ff)    //GETB
@@ -651,7 +651,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_TEST
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_TEST
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -663,7 +663,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_TESTSET
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_TESTSET
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -678,7 +678,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_CALL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_CALL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -704,7 +704,7 @@ func init() {
 			// source function is 'func (ls *LState) pushCallFrame(cf callFrame, fn LValue, meta bool) ' in '_state.go'
 			{
 				ls := L
-				cf := callFrame{Fn: callable, Pc: 0, Base: RA, LocalBase: RA + 1, ReturnBase: RA, NArgs: nargs, NRet: nret, Parent: cf, TailCall: 0}
+				cf := CallFrame{Fn: callable, Pc: 0, Base: RA, LocalBase: RA + 1, ReturnBase: RA, NArgs: nargs, NRet: nret, Parent: cf, TailCall: 0}
 				fn := lv
 				if meta {
 					cf.NArgs++
@@ -819,7 +819,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_TAILCALL
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_TAILCALL
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -864,7 +864,7 @@ func init() {
 			}
 			if callable.IsG {
 				luaframe := cf
-				L.pushCallFrame(callFrame{
+				L.pushCallFrame(CallFrame{
 					Fn:         callable,
 					Pc:         0,
 					Base:       RA,
@@ -887,9 +887,9 @@ func init() {
 				cf.Pc = 0
 				cf.Base = RA
 				cf.LocalBase = RA + 1
-				cf.ReturnBase = cf.ReturnBase
+				//cf.ReturnBase = cf.ReturnBase
 				cf.NArgs = nargs
-				cf.NRet = cf.NRet
+				//cf.NRet = cf.NRet
 				cf.TailCall++
 				lbase := cf.LocalBase
 				if meta {
@@ -1035,7 +1035,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_RETURN
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_RETURN
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -1294,7 +1294,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_FORLOOP
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_FORLOOP
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -1323,7 +1323,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_FORPREP
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_FORPREP
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -1342,7 +1342,7 @@ func init() {
 			cf.Pc += Sbx
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_TFORLOOP
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_TFORLOOP
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -1363,7 +1363,7 @@ func init() {
 			cf.Pc++
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_SETLIST
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_SETLIST
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -1386,7 +1386,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_CLOSE
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_CLOSE
 			cf := L.currentFrame
 			lbase := cf.LocalBase
 			A := int(inst>>18) & 0xff //GETA
@@ -1413,7 +1413,7 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_CLOSURE
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_CLOSURE
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -1428,15 +1428,15 @@ func init() {
 				cf.Pc++
 				B := opGetArgB(inst)
 				switch opGetOpCode(inst) {
-				case OP_MOVE:
+				case OPMove:
 					closure.Upvalues[i] = L.findUpvalue(lbase + B)
-				case OP_GETUPVAL:
+				case OPGetUpval:
 					closure.Upvalues[i] = cf.Fn.Upvalues[B]
 				}
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_VARARG
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_VARARG
 			reg := L.reg
 			cf := L.currentFrame
 			lbase := cf.LocalBase
@@ -1494,13 +1494,13 @@ func init() {
 			}
 			return 0
 		},
-		func(L *LState, inst uint32, baseframe *callFrame) int { //OP_NOP
+		func(L *LState, inst uint32, baseframe *CallFrame) int { //OP_NOP
 			return 0
 		},
 	}
 }
 
-func opArith(L *LState, inst uint32, baseframe *callFrame) int { //OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_POW
+func opArith(L *LState, inst uint32, baseframe *CallFrame) int { //OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_POW
 	reg := L.reg
 	cf := L.currentFrame
 	lbase := cf.LocalBase
@@ -1533,39 +1533,39 @@ func luaModulo(lhs, rhs LNumber) LNumber {
 
 func numberArith(L *LState, opcode int, lhs, rhs LNumber) LNumber {
 	switch opcode {
-	case OP_ADD:
+	case OPAdd:
 		return lhs + rhs
-	case OP_SUB:
+	case OPSub:
 		return lhs - rhs
-	case OP_MUL:
+	case OPMul:
 		return lhs * rhs
-	case OP_DIV:
+	case OPDiv:
 		return lhs / rhs
-	case OP_MOD:
+	case OPMod:
 		return luaModulo(lhs, rhs)
-	case OP_POW:
+	case OPPow:
 		flhs := float64(lhs)
 		frhs := float64(rhs)
 		return LNumber(math.Pow(flhs, frhs))
 	}
-	panic("should not reach here")
+	//panic("should not reach here")
 	return LNumber(0)
 }
 
 func objectArith(L *LState, opcode int, lhs, rhs LValue) LValue {
 	event := ""
 	switch opcode {
-	case OP_ADD:
+	case OPAdd:
 		event = "__add"
-	case OP_SUB:
+	case OPSub:
 		event = "__sub"
-	case OP_MUL:
+	case OPMul:
 		event = "__mul"
-	case OP_DIV:
+	case OPDiv:
 		event = "__div"
-	case OP_MOD:
+	case OPMod:
 		event = "__mod"
-	case OP_POW:
+	case OPPow:
 		event = "__pow"
 	}
 	op := L.metaOp2(lhs, rhs, event)

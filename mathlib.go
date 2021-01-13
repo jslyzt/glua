@@ -5,6 +5,7 @@ import (
 	"math/rand"
 )
 
+// OpenMath 打开math
 func OpenMath(L *LState) int {
 	mod := L.RegisterModule(MathLibName, mathFuncs).(*LTable)
 	mod.RawSetString("pi", LNumber(math.Pi))

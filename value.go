@@ -6,8 +6,10 @@ import (
 	"os"
 )
 
+// LValueType lua值类型
 type LValueType int
 
+// lua值类型枚举
 const (
 	LTNil LValueType = iota
 	LTBool
@@ -26,6 +28,7 @@ func (vt LValueType) String() string {
 	return lValueNames[int(vt)]
 }
 
+// LValue lua值
 type LValue interface {
 	String() string
 	Type() LValueType
@@ -40,7 +43,7 @@ type LValue interface {
 // LVIsFalse returns true if a given LValue is a nil or false otherwise false.
 func LVIsFalse(v LValue) bool { return v == LNil || v == LFalse }
 
-// LVIsFalse returns false if a given LValue is a nil or false otherwise true.
+// LVAsBool returns false if a given LValue is a nil or false otherwise true.
 func LVAsBool(v LValue) bool { return v != LNil && v != LFalse }
 
 // LVAsString returns string representation of a given LValue
@@ -78,41 +81,76 @@ func LVAsNumber(v LValue) LNumber {
 	return LNumber(0)
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LNilType lua nil 类型
 type LNilType struct{}
 
-func (nl *LNilType) String() string                     { return "nil" }
-func (nl *LNilType) Type() LValueType                   { return LTNil }
+// String string func
+func (nl *LNilType) String() string {
+	return "nil"
+}
+
+// Type 类型
+func (nl *LNilType) Type() LValueType {
+	return LTNil
+}
+
 func (nl *LNilType) assertFloat64() (float64, bool)     { return 0, false }
 func (nl *LNilType) assertString() (string, bool)       { return "", false }
 func (nl *LNilType) assertFunction() (*LFunction, bool) { return nil, false }
 
+// LNil lua nil value
 var LNil = LValue(&LNilType{})
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LBool lua bool 类型
 type LBool bool
 
+// String string func
 func (bl LBool) String() string {
 	if bool(bl) {
 		return "true"
 	}
 	return "false"
 }
-func (bl LBool) Type() LValueType                   { return LTBool }
+
+// Type 类型
+func (bl LBool) Type() LValueType {
+	return LTBool
+}
+
 func (bl LBool) assertFloat64() (float64, bool)     { return 0, false }
 func (bl LBool) assertString() (string, bool)       { return "", false }
 func (bl LBool) assertFunction() (*LFunction, bool) { return nil, false }
 
-var LTrue = LBool(true)
-var LFalse = LBool(false)
+// lua bool value
+var (
+	LTrue  = LBool(true)
+	LFalse = LBool(false)
+)
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LString lua string 类型
 type LString string
 
-func (st LString) String() string                     { return string(st) }
-func (st LString) Type() LValueType                   { return LTString }
+// String string func
+func (st LString) String() string {
+	return string(st)
+}
+
+// Type 类型
+func (st LString) Type() LValueType {
+	return LTString
+}
+
 func (st LString) assertFloat64() (float64, bool)     { return 0, false }
 func (st LString) assertString() (string, bool)       { return string(st), true }
 func (st LString) assertFunction() (*LFunction, bool) { return nil, false }
 
-// fmt.Formatter interface
+// Format fmt.Formatter interface
 func (st LString) Format(f fmt.State, c rune) {
 	switch c {
 	case 'd', 'i':
@@ -126,6 +164,9 @@ func (st LString) Format(f fmt.State, c rune) {
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// String string func
 func (nm LNumber) String() string {
 	if isInteger(nm) {
 		return fmt.Sprint(int64(nm))
@@ -133,12 +174,16 @@ func (nm LNumber) String() string {
 	return fmt.Sprint(float64(nm))
 }
 
-func (nm LNumber) Type() LValueType                   { return LTNumber }
+// Type 类型
+func (nm LNumber) Type() LValueType {
+	return LTNumber
+}
+
 func (nm LNumber) assertFloat64() (float64, bool)     { return float64(nm), true }
 func (nm LNumber) assertString() (string, bool)       { return "", false }
 func (nm LNumber) assertFunction() (*LFunction, bool) { return nil, false }
 
-// fmt.Formatter interface
+// Format fmt.Formatter interface
 func (nm LNumber) Format(f fmt.State, c rune) {
 	switch c {
 	case 'q', 's':
@@ -158,6 +203,9 @@ func (nm LNumber) Format(f fmt.State, c rune) {
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LTable lua table 类型
 type LTable struct {
 	Metatable LValue
 
@@ -168,12 +216,23 @@ type LTable struct {
 	k2i     map[LValue]int
 }
 
-func (tb *LTable) String() string                     { return fmt.Sprintf("table: %p", tb) }
-func (tb *LTable) Type() LValueType                   { return LTTable }
+// String string func
+func (tb *LTable) String() string {
+	return fmt.Sprintf("table: %p", tb)
+}
+
+// Type 类型
+func (tb *LTable) Type() LValueType {
+	return LTTable
+}
+
 func (tb *LTable) assertFloat64() (float64, bool)     { return 0, false }
 func (tb *LTable) assertString() (string, bool)       { return "", false }
 func (tb *LTable) assertFunction() (*LFunction, bool) { return nil, false }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LFunction lua func 类型
 type LFunction struct {
 	IsG       bool
 	Env       *LTable
@@ -181,14 +240,27 @@ type LFunction struct {
 	GFunction LGFunction
 	Upvalues  []*Upvalue
 }
+
+// LGFunction lua 函数
 type LGFunction func(*LState) int
 
-func (fn *LFunction) String() string                     { return fmt.Sprintf("function: %p", fn) }
-func (fn *LFunction) Type() LValueType                   { return LTFunction }
+// String string func
+func (fn *LFunction) String() string {
+	return fmt.Sprintf("function: %p", fn)
+}
+
+// Type 类型
+func (fn *LFunction) Type() LValueType {
+	return LTFunction
+}
+
 func (fn *LFunction) assertFloat64() (float64, bool)     { return 0, false }
 func (fn *LFunction) assertString() (string, bool)       { return "", false }
 func (fn *LFunction) assertFunction() (*LFunction, bool) { return fn, true }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Global 全局
 type Global struct {
 	MainThread    *LState
 	CurrentThread *LState
@@ -200,6 +272,9 @@ type Global struct {
 	gccount    int32
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LState 状态
 type LState struct {
 	G       *Global
 	Parent  *LState
@@ -210,38 +285,68 @@ type LState struct {
 
 	stop         int32
 	reg          *registry
-	stack        callFrameStack
+	stack        CallFrameStack
 	alloc        *allocator
-	currentFrame *callFrame
+	currentFrame *CallFrame
 	wrapped      bool
 	uvcache      *Upvalue
 	hasErrorFunc bool
-	mainLoop     func(*LState, *callFrame)
+	mainLoop     func(*LState, *CallFrame)
 	ctx          context.Context
 }
 
-func (ls *LState) String() string                     { return fmt.Sprintf("thread: %p", ls) }
-func (ls *LState) Type() LValueType                   { return LTThread }
+// String string func
+func (ls *LState) String() string {
+	return fmt.Sprintf("thread: %p", ls)
+}
+
+// Type 类型
+func (ls *LState) Type() LValueType {
+	return LTThread
+}
+
 func (ls *LState) assertFloat64() (float64, bool)     { return 0, false }
 func (ls *LState) assertString() (string, bool)       { return "", false }
 func (ls *LState) assertFunction() (*LFunction, bool) { return nil, false }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LUserData lua 用户数据
 type LUserData struct {
 	Value     interface{}
 	Env       *LTable
 	Metatable LValue
 }
 
-func (ud *LUserData) String() string                     { return fmt.Sprintf("userdata: %p", ud) }
-func (ud *LUserData) Type() LValueType                   { return LTUserData }
+// String string func
+func (ud *LUserData) String() string {
+	return fmt.Sprintf("userdata: %p", ud)
+}
+
+// Type 类型
+func (ud *LUserData) Type() LValueType {
+	return LTUserData
+}
+
 func (ud *LUserData) assertFloat64() (float64, bool)     { return 0, false }
 func (ud *LUserData) assertString() (string, bool)       { return "", false }
 func (ud *LUserData) assertFunction() (*LFunction, bool) { return nil, false }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// LChannel lua channel类型
 type LChannel chan LValue
 
-func (ch LChannel) String() string                     { return fmt.Sprintf("channel: %p", ch) }
-func (ch LChannel) Type() LValueType                   { return LTChannel }
+// String string func
+func (ch LChannel) String() string {
+	return fmt.Sprintf("channel: %p", ch)
+}
+
+// Type 类型
+func (ch LChannel) Type() LValueType {
+	return LTChannel
+}
+
 func (ch LChannel) assertFloat64() (float64, bool)     { return 0, false }
 func (ch LChannel) assertString() (string, bool)       { return "", false }
 func (ch LChannel) assertFunction() (*LFunction, bool) { return nil, false }
